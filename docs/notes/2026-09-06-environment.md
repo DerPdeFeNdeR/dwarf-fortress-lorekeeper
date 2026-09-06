@@ -7,6 +7,10 @@
   `C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\script-paths.txt`
 - Repository script path configured:
   `+C:\Users\contr\projects\dwarf-fortress-lorekeeper\dfhack\scripts`
+- The DFHack startup file is located at:
+  `C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\init\dfhack.init`
+- `lorekeeper/autostart` was added to that file. It starts the collector on
+  world load; a full Dwarf Fortress restart is required after changing it.
 - First repository command:
   `lorekeeper/dump`
 - In-game validation completed successfully: after restarting Dwarf Fortress,

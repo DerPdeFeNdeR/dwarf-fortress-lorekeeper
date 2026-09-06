@@ -64,6 +64,10 @@
   the translation watcher with DFHack/Dwarf Fortress startup rather than
   requiring a separate Windows login task. Keep model execution outside DFHack
   so the game loop and credentials remain isolated.
+- Verified current Steam setup: the DFHack startup file is
+  `C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\init\dfhack.init`.
+  Documentation must include the `init` subdirectory when instructing users
+  to enable `lorekeeper/autostart`.
 
 ## Coding and review standard
 

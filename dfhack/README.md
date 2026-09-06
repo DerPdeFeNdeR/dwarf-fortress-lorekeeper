@@ -144,10 +144,11 @@ to the DFHack initialization file:
 lorekeeper/autostart
 ```
 
-The file is normally:
+On the current Steam installation, the file is located in the `init`
+subdirectory:
 
 ```text
-C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\dfhack.init
+C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\init\dfhack.init
 ```
 
 Fully exit and restart Dwarf Fortress after changing `dfhack.init`. The
