@@ -196,7 +196,7 @@ assert_true(#story_input.events[3].thoughts_added == 1 and
 assert_true(translation.repair_story_text(
         'Doren ├▓nulokil worked as a woodcutter.',
         'Doren ònulokil, Woodcutter') ==
-    'Doren ònulokil worked as a woodcutter.',
+    dfhack.utf2df('Doren ònulokil') .. ' worked as a woodcutter.',
     'repairs CP437-mojibake story names')
 
 local unknown_thought = glossary.describe_thought('FutureThoughtToken')

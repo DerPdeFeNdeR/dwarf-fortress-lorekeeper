@@ -18,8 +18,15 @@ function repair_story_text(text, full_name)
 
     local personal_name = full_name:match('^(.-),') or full_name
     for _, source_name in ipairs({full_name, personal_name}) do
-        local mojibake_name = utf8_bytes_as_cp437(source_name)
-        text = text:gsub(mojibake_name, function() return source_name end)
+        local candidates = {
+            utf8_bytes_as_cp437(source_name),
+            dfhack.df2utf(source_name),
+            utf8_bytes_as_cp437(utf8_bytes_as_cp437(source_name)),
+        }
+        local display_name = dfhack.utf2df(source_name)
+        for _, candidate in ipairs(candidates) do
+            text = text:gsub(candidate, function() return display_name end)
+        end
     end
     return text
 end

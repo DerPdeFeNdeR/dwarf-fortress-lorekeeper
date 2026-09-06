@@ -127,7 +127,7 @@ function LorekeeperHistoryWindow:refresh()
     if story_status == 'ready' then
         local story_text = translation.repair_story_text(
             story.text, selected.identity.name)
-        add_wrapped(choices, dfhack.utf2df(story_text))
+        add_wrapped(choices, story_text)
         table.insert(choices, {text=('Confidence: %s'):format(story.confidence or '<unknown>')})
     elseif story_status == 'pending' then
         table.insert(choices, {text='Story pending; the background watcher is processing it.',
