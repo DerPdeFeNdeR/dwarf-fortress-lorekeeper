@@ -3,6 +3,27 @@
 
 local json = require('json')
 
+local function utf8_bytes_as_cp437(text)
+    local converted = {}
+    for index = 1, #text do
+        table.insert(converted, dfhack.df2utf(text:sub(index, index)))
+    end
+    return table.concat(converted)
+end
+
+function repair_story_text(text, full_name)
+    if type(text) ~= 'string' or type(full_name) ~= 'string' then
+        return text
+    end
+
+    local personal_name = full_name:match('^(.-),') or full_name
+    for _, source_name in ipairs({full_name, personal_name}) do
+        local mojibake_name = utf8_bytes_as_cp437(source_name)
+        text = text:gsub(mojibake_name, function() return source_name end)
+    end
+    return text
+end
+
 local function decode_queue_line(line)
     local ok, record = pcall(json.decode, line)
     if ok then

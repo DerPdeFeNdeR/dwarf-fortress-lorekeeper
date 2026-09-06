@@ -125,7 +125,9 @@ function LorekeeperHistoryWindow:refresh()
         selected.identity.id, records[#records].ingame_time)
     add_header(choices, 'History story')
     if story_status == 'ready' then
-        add_wrapped(choices, story.text)
+        local story_text = translation.repair_story_text(
+            story.text, selected.identity.name)
+        add_wrapped(choices, dfhack.utf2df(story_text))
         table.insert(choices, {text=('Confidence: %s'):format(story.confidence or '<unknown>')})
     elseif story_status == 'pending' then
         table.insert(choices, {text='Story pending; the background watcher is processing it.',

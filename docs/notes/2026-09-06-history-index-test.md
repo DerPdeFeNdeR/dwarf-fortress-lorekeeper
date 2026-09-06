@@ -67,6 +67,8 @@ window displays `Mistêm Oslandakas` correctly after the watcher processes a
 fresh story job. A later Doren story exposed CP437 mojibake in model-generated
 name text; the queue processor now repairs that known form and story requests
 use version 3 so the corrected path is regenerated.
+The in-game history view also repairs that form at display time so existing
+caches remain readable without destructive save-file edits.
 
 The collector prewarm path was also verified:
 

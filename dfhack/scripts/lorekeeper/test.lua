@@ -5,6 +5,7 @@
 local history = reqscript('lorekeeper/history')
 local policy = reqscript('lorekeeper/policy')
 local glossary = reqscript('lorekeeper/glossary')
+local translation = reqscript('lorekeeper/translation')
 
 local passed = 0
 
@@ -192,6 +193,11 @@ assert_true(story_input.schema_version == 2 and #story_input.events == 3 and
 assert_true(#story_input.events[3].thoughts_added == 1 and
         story_input.events[3].thoughts_added[1].thought_name == 'Talked',
     'includes exact thought additions in story input')
+assert_true(translation.repair_story_text(
+        'Doren ├▓nulokil worked as a woodcutter.',
+        'Doren ònulokil, Woodcutter') ==
+    'Doren ònulokil worked as a woodcutter.',
+    'repairs CP437-mojibake story names')
 
 local unknown_thought = glossary.describe_thought('FutureThoughtToken')
 assert_true(not unknown_thought.known and unknown_thought.source == 'unknown' and

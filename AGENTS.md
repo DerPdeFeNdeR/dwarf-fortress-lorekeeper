@@ -38,6 +38,8 @@
 - `lorekeeper/history/show` is the dedicated in-game history view. It displays
   the cached story above the grouped timeline and supports scrolling, refresh,
   copying, and closing without replacing the vanilla screen.
+- The history view normalizes known CP437-mojibake dwarf names in cached story
+  prose before rendering, while retaining the original cache text for audit.
 - The history view checks the latest timeline version and reports whether its
   story is ready, pending in the queue, or not yet requested; it must not show
   an older cached story as current.
