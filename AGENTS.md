@@ -40,6 +40,10 @@
   additions/removals, profession transitions, and personality facet changes.
   Change the request/schema version when the payload contract changes so stale
   cached stories are not reused.
+- The local `helper/watch_queue.py` watcher is the hands-off development
+  workflow: it monitors the active save queue, invokes Codex outside DFHack,
+  and updates the cache while the player remains in-game. A future installer
+  or launcher should start this watcher automatically.
 
 ## Coding and review standard
 

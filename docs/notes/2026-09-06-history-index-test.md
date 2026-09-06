@@ -42,6 +42,14 @@ The enriched history-story path was verified afterward:
 - The Codex helper processed one fresh job and returned a high-confidence
   story using the exact timeline inputs.
 
+The hands-off watcher path was verified afterward:
+
+- The watcher monitored the active region queue in a separate WSL session.
+- A collector run increased Mistêm's timeline to 32 records and 20 events.
+- `lorekeeper/story` queued the fresh story while the game remained open.
+- The watcher automatically processed one job, and the in-game history window
+  displayed the updated cached story after refresh.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.

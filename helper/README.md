@@ -73,3 +73,13 @@ python3 helper/process_queue.py \
 Repeat the command whenever new jobs are queued. It skips IDs already present
 in the result cache and writes that cache beside the queue. An explicit second
 path is still supported when needed.
+
+For the hands-off workflow, run the background watcher instead:
+
+```bash
+python3 helper/watch_queue.py \
+  "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save/region3/lorekeeper-translation-queue.jsonl"
+```
+
+It checks for new jobs every five seconds, retries processing failures, and
+writes results beside the queue. Use `--once` for a bounded test run.
