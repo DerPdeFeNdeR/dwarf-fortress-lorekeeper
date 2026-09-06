@@ -150,7 +150,8 @@ Future history UI
 - **Cached story view:** `lorekeeper/history/show` displays the cached Codex
   story and grouped timeline in a scrollable in-game window.
 - **Queue watcher:** `helper/watch_queue.py` monitors the save queue and
-  processes new stories automatically; automatic startup/installation remains.
+  processes new stories automatically. `helper/watch_save_directory.py` now
+  follows all save regions; automatic startup/installation remains.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.

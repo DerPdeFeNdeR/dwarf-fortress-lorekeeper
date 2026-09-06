@@ -56,6 +56,11 @@ processing finished before the window opened, the transient pending state was
 not visible. The modal window pauses the game while open, and `R` rereads the
 cache without requiring a restart.
 
+The save-directory watcher was also smoke-tested against the real Dwarf
+Fortress save directory with `--once`; it discovered the save queues and
+completed with zero pending jobs. Its unit test confirms that multiple region
+queues are processed independently and that unchanged queues are not rerun.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.

@@ -83,3 +83,13 @@ python3 helper/watch_queue.py \
 
 It checks for new jobs every five seconds, retries processing failures, and
 writes results beside the queue. Use `--once` for a bounded test run.
+
+To watch every region/save beneath the Dwarf Fortress save directory, use:
+
+```bash
+python3 helper/watch_save_directory.py \
+  "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
+```
+
+This is the preferred target for a future Windows/WSL login task because it
+continues working when the active region changes.

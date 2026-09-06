@@ -46,7 +46,9 @@
 - The local `helper/watch_queue.py` watcher is the hands-off development
   workflow: it monitors the active save queue, invokes Codex outside DFHack,
   and updates the cache while the player remains in-game. A future installer
-  or launcher should start this watcher automatically.
+  or launcher should start the save-directory watcher automatically. Prefer
+  `helper/watch_save_directory.py` for startup because it follows all regions
+  beneath the Dwarf Fortress save directory.
 
 ## Coding and review standard
 
