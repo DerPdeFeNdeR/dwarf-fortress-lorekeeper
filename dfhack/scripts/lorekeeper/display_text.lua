@@ -4,6 +4,10 @@
 function wrap(text, width)
     width = width or 68
     local lines = {}
+    -- Use display-safe punctuation without transliterating names or cache text.
+    text = text:gsub('—', ' -- '):gsub('–', '-')
+        :gsub('“', '"'):gsub('”', '"'):gsub('‘', "'"):gsub('’', "'")
+        :gsub('…', '...')
     text = text:gsub('\r\n', '\n'):gsub('\r', '\n')
     -- Split before conversion: DF display encoding does not preserve newlines.
     for paragraph in (text .. '\n'):gmatch('(.-)\n') do

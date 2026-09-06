@@ -57,6 +57,7 @@ function LorekeeperHistoryWindow:refresh()
             end
             if data.story then
                 if data.story_revision ~= data.revision then add('Previous story; newer history is being prepared.') end
+                if data.story_notice then add(data.story_notice); add('') end
                 add(data.story)
             end
             if data.error then add(data.error) end

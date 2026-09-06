@@ -19,6 +19,9 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+assert_true(table.concat(display_text.wrap('Minkot Udistatír—a “small” comfort…', 100), '\n') ==
+    dfhack.utf2df('Minkot Udistatír -- a "small" comfort...'),
+    'renders Unicode punctuation without damaging accented names')
 assert_true(#paragraphs == 3 and paragraphs[1] == 'First paragraph.' and
     paragraphs[2] == '' and paragraphs[3] == 'Later records.',
     'preserves story paragraph breaks without question marks')

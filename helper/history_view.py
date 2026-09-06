@@ -7,9 +7,10 @@ from pathlib import Path
 
 from codex_batch import run_batch
 from process_queue import load_queue, load_results, write_results, repair_story_names
+from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 5
+VIEW_SCHEMA_VERSION = 7
 
 
 def time_key(record):
@@ -120,7 +121,9 @@ def process_views(save):
         state = dict(schema_version=VIEW_SCHEMA_VERSION,
                      request=request, revision=revision, record_count=len(records),
                      event_count=len(events), state='processing', updated_at=time.time(),
-                     story=previous.get('story'), story_revision=previous.get('story_revision'))
+                     story=previous.get('story'), story_revision=previous.get('story_revision'),
+                     story_explanation=previous.get('story_explanation'),
+                     story_notice=previous.get('story_notice'))
         state['attempts'] = previous.get('attempts', 0) if same_schema and previous.get('request') == request else 0
         # Pages stay bounded even for long histories. Publish before model work.
         for page, offset in enumerate(range(0, len(events), 20)):
@@ -149,12 +152,9 @@ def process_views(save):
         write_results(output, state)
         item = dict(id=f'history-v{VIEW_SCHEMA_VERSION}:{unit_id}:{revision}', kind='dwarf_history',
                     raw=json.dumps({'schema_version': VIEW_SCHEMA_VERSION,
-                                    'identity': records[-1]['snapshot']['identity'], 'events': events}),
-                    context=('Write a concise factual history using only supplied events. Preserve Unicode names exactly. '
-                             'A timeline_reset starts a separate recorded segment with a fresh baseline. '
-                             'Time moved backward, possibly after loading an earlier save; the cause is unconfirmed. '
-                             'Do not infer thought removals, stress changes, or causal continuity across segments. '
-                             'Distinguish earlier recorded segments from the latest segment.'))
+                                    'identity': records[-1]['snapshot']['identity'],
+                                    'events': narrative_events(events)}),
+                    context=HISTORIAN_CONTEXT)
         try:
             if len(item['raw'].encode()) > 200000:
                 raise ValueError('History exceeds the current story size limit; timeline is available.')
@@ -162,7 +162,9 @@ def process_views(save):
             repair_story_names([item], [result])
             if len(result['text'].encode('utf-8')) > 8000:
                 raise ValueError('Generated story exceeds the display size limit.')
-            state.update(state='ready', story=result['text'], story_revision=revision)
+            state.update(state='ready', story=result['text'], story_revision=revision,
+                         story_explanation=result.get('explanation', ''),
+                         story_notice=STORY_NOTICE)
         except Exception as error:
             state['attempts'] += 1
             state.update(state='failed', error=str(error)[-500:],

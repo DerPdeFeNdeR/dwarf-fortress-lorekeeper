@@ -8,6 +8,7 @@ from history_view import VIEW_SCHEMA_VERSION, build_timeline, process_views
 from process_queue import load_queue, load_results, process_queue, write_results
 from codex_batch import run_process
 from worker_runtime import worker_runtime
+from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events
 
 
 def record(tick, stress):
@@ -17,6 +18,15 @@ def record(tick, stress):
 
 
 class HistoryViewTests(unittest.TestCase):
+    def test_historian_contract_preserves_tone_and_factual_boundaries(self):
+        for instruction in ('one consistent', 'dry wit', 'gravity and compassion',
+                            'Preserve Unicode names exactly', 'Never invent dialogue',
+                            'baseline parenthood', 'removed thought',
+                            'explanation field, not text', 'latest recorded segment',
+                            'may imagine plausible internal motives',
+                            'Never present\nan imagined motive as a game-confirmed fact'):
+            self.assertIn(instruction, HISTORIAN_CONTEXT)
+
     def test_process_timeout_is_bounded(self):
         with self.assertRaisesRegex(RuntimeError, 'time limit'):
             run_process([sys.executable, '-c', 'import time; time.sleep(5)'],
@@ -77,17 +87,37 @@ class HistoryViewTests(unittest.TestCase):
             source.write_text(contents)
             def generate(items):
                 payload = json.loads(items[0]['raw'])
+                self.assertEqual(items[0]['context'], HISTORIAN_CONTEXT)
                 self.assertEqual(payload['schema_version'], VIEW_SCHEMA_VERSION)
-                self.assertEqual(payload['events'][1]['kind'], 'timeline_reset')
+                self.assertEqual(len(payload['events']), 1)
+                self.assertEqual(payload['events'][0]['kind'], 'baseline')
+                self.assertEqual(payload['events'][0]['time']['year_tick'], 5)
                 page = load_results(next(views.glob('1.*.0.json')))
                 self.assertTrue(any('Fresh baseline' in line for line in page['lines']))
-                return {'results': [dict(id=items[0]['id'], text='Separate recorded segments.')]}
+                return {'results': [dict(id=items[0]['id'], text='The miner took pride in work.',
+                                        explanation='Time reversal; separate observations.') ]}
             with patch('history_view.run_batch', side_effect=generate) as model:
                 process_views(save)
                 process_views(save)
                 self.assertEqual(model.call_count, 1)
             self.assertEqual(load_results(views / '1.json')['schema_version'], VIEW_SCHEMA_VERSION)
+            self.assertEqual(load_results(views / '1.json')['story_explanation'],
+                             'Time reversal; separate observations.')
+            self.assertNotIn('Time reversal', load_results(views / '1.json')['story'])
+            self.assertEqual(load_results(views / '1.json')['story_notice'], STORY_NOTICE)
             self.assertEqual(source.read_text(), contents)
+
+    def test_narrative_uses_latest_segment_without_mutating_full_timeline(self):
+        events = build_timeline([record(20, 0), record(5, -10), record(6, -20),
+                                 record(1, -30), record(2, -40)])
+        original = json.dumps(events, sort_keys=True)
+        selected = narrative_events(events)
+        self.assertEqual([e['kind'] for e in selected], ['baseline', 'stress_trend'])
+        self.assertEqual(selected[0]['time']['year_tick'], 1)
+        self.assertEqual(json.dumps(events, sort_keys=True), original)
+        self.assertEqual(narrative_events([]), [])
+        ordinary = build_timeline([record(1, 0), record(2, -10)])
+        self.assertEqual(narrative_events(ordinary), ordinary)
 
     def test_mixed_encodings_and_incomplete_tail(self):
         with tempfile.TemporaryDirectory() as root:

@@ -6,6 +6,16 @@
 - DFHack is already installed and working in the user's game setup.
 - The project should translate/explain in-game information, especially dwarf thoughts, personality, and related mental-state data.
 - The project should also provide a history UI for reviewing changes and notable events over time.
+- Stories use one consistent, original fortress historian, not selectable voices.
+  The narrator is learned, observant, quietly proud of dwarven craft, and dryly
+  witty. Tone follows the events: lively and warm for joys or absurdities,
+  restrained and compassionate for grief and hardship. Plausible internal motives
+  and interpretations may be imagined from known character context and signaled
+  as interpretation. Never invent events, dialogue, people, relationships, or
+  outcomes. Display "Based on game events, with imagined motives and interpretation."
+  outside the story. Use only the latest segment for the main biography; retain
+  earlier segments in the technical timeline. Technical gaps and resets belong
+  outside the narrative; do not make them events in the dwarf's life.
 - Primary UX requirement: when the player navigates to/selects a dwarf in Dwarf Fortress, the tool should open a dedicated DFHack UI window showing a readable summary of that dwarf's thoughts, personality, and related mental state. Keep the vanilla screen intact. In-place replacement of vanilla text is a possible later experiment, not the initial target.
 
 ## Working assumptions
@@ -53,6 +63,9 @@
 - Split story paragraph breaks before UTF-8-to-DF conversion; preserve blank
   lines and convert each display line once. The user verified the formatting
   fix and all 30 DFHack tests on 2026-09-06.
+- Display-safe punctuation replacements must preserve accented names and leave
+  cached Unicode untouched. On 2026-09-06 the user verified the v7 historian
+  narrative, its separate interpretation notice, and all 31 DFHack tests.
 - History story requests use a versioned compact payload with exact thought
   additions/removals, profession transitions, and personality facet changes.
   Change the request/schema version when the payload contract changes so stale
@@ -60,7 +73,7 @@
 - The Python history view preserves append order. A backward (year, tick)
   transition starts a `timeline_reset` segment with a fresh snapshot baseline;
   never infer normal changes across that boundary or sort the records to hide it.
-  History-view schema v5 invalidates older prepared stories. A reset indicates
+  History-view schema changes invalidate older prepared stories. A reset indicates
   recorded time reversal, not proof of a save reload. On 2026-09-06 the user
   verified Minkot's regenerated two-segment story and the final page's explicit
   reset/fresh-baseline label in-game.
