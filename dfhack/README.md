@@ -91,6 +91,25 @@ Records are written as newline-delimited JSON to the active save directory at
 is skipped. The command records only when explicitly run; it does not poll or
 modify game state.
 
+To start or stop the all-citizen background collector:
+
+```text
+lorekeeper/collect start
+lorekeeper/collect status
+lorekeeper/collect stop
+```
+
+The collector scans citizens in small batches, keeps signatures in memory,
+and writes only changed snapshots. It limits each dwarf to one emitted record
+per in-game day while still checking for changes. It is disabled by default
+and stops when the world unloads.
+
+To run the collector policy tests without writing to the history file:
+
+```text
+lorekeeper/test
+```
+
 If DFHack cannot find the command, confirm the path has no quotes, restart the
 game completely, and check that the repository file exists at
 `dfhack/scripts/lorekeeper/dump.lua`.

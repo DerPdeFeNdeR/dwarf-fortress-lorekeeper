@@ -1,0 +1,140 @@
+-- Run Lorekeeper's pure collector tests inside DFHack.
+--
+-- Run: lorekeeper/test
+
+local history = reqscript('lorekeeper/history')
+local policy = reqscript('lorekeeper/policy')
+
+local passed = 0
+
+local function assert_true(condition, description)
+    if not condition then
+        error('FAIL: ' .. description)
+    end
+    passed = passed + 1
+    print('PASS: ' .. description)
+end
+
+local function copy_snapshot(snapshot_data)
+    local copy = {
+        identity={
+            id=snapshot_data.identity.id,
+            name=snapshot_data.identity.name,
+            race=snapshot_data.identity.race,
+            caste=snapshot_data.identity.caste,
+            profession=snapshot_data.identity.profession,
+            citizen=snapshot_data.identity.citizen,
+        },
+        soul_present=snapshot_data.soul_present,
+        mental_state={stress=snapshot_data.mental_state.stress},
+        thoughts={},
+        personality_facets={},
+    }
+
+    for index, thought in ipairs(snapshot_data.thoughts) do
+        copy.thoughts[index] = {
+            thought_id=thought.thought_id,
+            thought_name=thought.thought_name,
+            emotion_id=thought.emotion_id,
+            emotion_name=thought.emotion_name,
+            severity=thought.severity,
+            relative_strength=thought.relative_strength,
+            subthought=thought.subthought,
+        }
+    end
+
+    for index, facet in ipairs(snapshot_data.personality_facets) do
+        copy.personality_facets[index] = {
+            facet_id=facet.facet_id,
+            facet_name=facet.facet_name,
+            value=facet.value,
+        }
+    end
+
+    return copy
+end
+
+local fixture = {
+    identity={
+        id=9001,
+        name='Test Dwarf',
+        race='DWARF',
+        caste='MALE',
+        profession='Miner',
+        citizen=true,
+    },
+    soul_present=true,
+    mental_state={stress=1000},
+    thoughts={
+        {
+            thought_id=165,
+            thought_name='Talked',
+            emotion_id=66,
+            emotion_name='FONDNESS',
+            severity=0,
+            relative_strength=0,
+            subthought=17,
+        },
+        {
+            thought_id=189,
+            thought_name='WatchPerform',
+            emotion_id=36,
+            emotion_name='DELIGHT',
+            severity=0,
+            relative_strength=0,
+            subthought=500,
+        },
+    },
+    personality_facets={
+        {facet_id='CONFIDENCE', facet_name='CONFIDENCE', value=50},
+    },
+}
+
+local base_signature = history.signature(fixture)
+local subthought_changed = copy_snapshot(fixture)
+subthought_changed.thoughts[1].subthought = 99
+assert_true(history.signature(subthought_changed) == base_signature,
+    'ignores subthought-only changes')
+
+local reordered = copy_snapshot(fixture)
+reordered.thoughts[1], reordered.thoughts[2] = reordered.thoughts[2], reordered.thoughts[1]
+assert_true(history.signature(reordered) == base_signature,
+    'ignores thought list ordering')
+
+local thought_added = copy_snapshot(fixture)
+table.insert(thought_added.thoughts, copy_snapshot(fixture).thoughts[1])
+assert_true(history.signature(thought_added) ~= base_signature,
+    'detects thought count changes')
+
+local small_stress_change = copy_snapshot(fixture)
+small_stress_change.mental_state.stress = 1200
+assert_true(history.signature(small_stress_change) == base_signature,
+    'ignores stress changes within one signature band')
+
+local large_stress_change = copy_snapshot(fixture)
+large_stress_change.mental_state.stress = 1600
+assert_true(history.signature(large_stress_change) ~= base_signature,
+    'detects stress band changes')
+
+local facet_changed = copy_snapshot(fixture)
+facet_changed.personality_facets[1].value = 51
+assert_true(history.signature(facet_changed) ~= base_signature,
+    'detects personality changes')
+
+assert_true(history.should_append(nil, fixture),
+    'appends when no previous snapshot exists')
+assert_true(not history.should_append(fixture, subthought_changed),
+    'skips duplicate snapshots')
+assert_true(history.should_append(fixture, thought_added),
+    'appends changed snapshots')
+
+assert_true(not policy.should_record(base_signature, base_signature, 100, 200, 100),
+    'skips unchanged signatures')
+assert_true(policy.should_record('old', 'new', nil, 200, 100),
+    'records first changed snapshot')
+assert_true(not policy.should_record('old', 'new', 150, 200, 100),
+    'honors recording cooldown')
+assert_true(policy.should_record('old', 'new', 100, 200, 100),
+    'records after cooldown')
+
+print(('The Lorekeeper: %d tests passed.'):format(passed))

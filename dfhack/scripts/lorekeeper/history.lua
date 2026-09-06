@@ -2,12 +2,14 @@
 --@module = true
 
 local json = require('json')
+local get_history_path
+local STRESS_SIGNATURE_BAND = 500
 
 local function append_signature_value(parts, value)
     table.insert(parts, tostring(value))
 end
 
-local function snapshot_signature(snapshot_data)
+function signature(snapshot_data)
     local parts = {}
     local identity = snapshot_data.identity
     append_signature_value(parts, identity.id)
@@ -17,14 +19,27 @@ local function snapshot_signature(snapshot_data)
     append_signature_value(parts, identity.profession)
     append_signature_value(parts, identity.citizen)
     append_signature_value(parts, snapshot_data.soul_present)
-    append_signature_value(parts, snapshot_data.mental_state.stress)
+    append_signature_value(parts, snapshot_data.mental_state.stress // STRESS_SIGNATURE_BAND)
 
+    local thought_counts = {}
     for _, thought in ipairs(snapshot_data.thoughts) do
-        append_signature_value(parts, thought.thought_id)
-        append_signature_value(parts, thought.emotion_id)
-        append_signature_value(parts, thought.severity)
-        append_signature_value(parts, thought.relative_strength)
-        append_signature_value(parts, thought.subthought)
+        local thought_key = table.concat({
+            tostring(thought.thought_id),
+            tostring(thought.emotion_id),
+            tostring(thought.severity),
+            tostring(thought.relative_strength),
+        }, ':')
+        thought_counts[thought_key] = (thought_counts[thought_key] or 0) + 1
+    end
+
+    local thought_keys = {}
+    for thought_key in pairs(thought_counts) do
+        table.insert(thought_keys, thought_key)
+    end
+    table.sort(thought_keys)
+    for _, thought_key in ipairs(thought_keys) do
+        append_signature_value(parts, thought_key)
+        append_signature_value(parts, thought_counts[thought_key])
     end
 
     for _, facet in ipairs(snapshot_data.personality_facets) do
@@ -55,7 +70,31 @@ local function get_latest_snapshot(path, dwarf_id)
     return latest_snapshot
 end
 
-local function get_history_path()
+function load_latest_signatures()
+    local path, path_error = get_history_path()
+    if not path then
+        return nil, path_error
+    end
+
+    local signatures = {}
+    local file = io.open(path, 'r')
+    if not file then
+        return signatures, path
+    end
+
+    for line in file:lines() do
+        local ok, record = pcall(json.decode, line)
+        if ok and record and record.record_type == 'dwarf_snapshot' and
+                record.snapshot and record.snapshot.identity then
+            signatures[record.snapshot.identity.id] = signature(record.snapshot)
+        end
+    end
+
+    file:close()
+    return signatures, path
+end
+
+function get_history_path()
     if not dfhack.isWorldLoaded() then
         return nil, 'no world is loaded'
     end
@@ -73,45 +112,67 @@ function get_path()
     return get_history_path()
 end
 
-function append_snapshot(snapshot_data)
+function should_append(previous_snapshot, current_snapshot)
+    return not previous_snapshot or
+        signature(previous_snapshot) ~= signature(current_snapshot)
+end
+
+function append_snapshots(snapshot_data_list, skip_file_deduplication)
     local path, path_error = get_history_path()
     if not path then
-        return nil, path_error
+        return nil, false, path_error
     end
 
-    local latest_snapshot = get_latest_snapshot(path, snapshot_data.identity.id)
-    if latest_snapshot and
-            snapshot_signature(latest_snapshot) == snapshot_signature(snapshot_data) then
+    local records = {}
+    for _, snapshot_data in ipairs(snapshot_data_list) do
+        if not skip_file_deduplication then
+            local latest_snapshot = get_latest_snapshot(path, snapshot_data.identity.id)
+            if latest_snapshot and not should_append(latest_snapshot, snapshot_data) then
+                goto continue
+            end
+        end
+
+        table.insert(records, {
+            schema_version=1,
+            record_type='dwarf_snapshot',
+            captured_at=os.date('!%Y-%m-%dT%H:%M:%SZ'),
+            ingame_time={
+                year=df.global.cur_year,
+                year_tick=df.global.cur_year_tick,
+            },
+            snapshot=snapshot_data,
+        })
+
+        ::continue::
+    end
+
+    if #records == 0 then
         return path, false
     end
 
-    local record = {
-        schema_version=1,
-        record_type='dwarf_snapshot',
-        captured_at=os.date('!%Y-%m-%dT%H:%M:%SZ'),
-        ingame_time={
-            year=df.global.cur_year,
-            year_tick=df.global.cur_year_tick,
-        },
-        snapshot=snapshot_data,
-    }
-
     local file, open_error = io.open(path, 'a')
     if not file then
-        return nil, ('could not open %s: %s'):format(path, tostring(open_error))
+        return nil, false, ('could not open %s: %s'):format(path, tostring(open_error))
     end
 
-    local ok, encoded_or_error = pcall(json.encode, record, {pretty=false})
-    if not ok then
-        file:close()
-        return nil, ('could not encode history record: %s'):format(tostring(encoded_or_error))
+    for _, record in ipairs(records) do
+        local ok, encoded_or_error = pcall(json.encode, record, {pretty=false})
+        if not ok then
+            file:close()
+            return nil, false, ('could not encode history record: %s'):format(tostring(encoded_or_error))
+        end
+
+        local write_ok, write_error = file:write(encoded_or_error, '\n')
+        if not write_ok then
+            file:close()
+            return nil, false, ('could not write %s: %s'):format(path, tostring(write_error))
+        end
     end
 
-    local write_ok, write_error = file:write(encoded_or_error, '\n')
     file:close()
-    if not write_ok then
-        return nil, ('could not write %s: %s'):format(path, tostring(write_error))
-    end
-
     return path, true
+end
+
+function append_snapshot(snapshot_data, skip_file_deduplication)
+    return append_snapshots({snapshot_data}, skip_file_deduplication)
 end
