@@ -4,74 +4,41 @@
 
 local gui = require('gui')
 local widgets = require('gui.widgets')
-
-local function get_enum_name(enum, value)
-    if type(value) == 'string' then
-        return value
-    end
-
-    local direct_name = enum[value]
-    if type(direct_name) == 'string' then
-        return direct_name
-    end
-
-    for enum_value, enum_name in ipairs(enum) do
-        if enum_value == value then
-            return enum_name
-        end
-    end
-
-    return ('<unknown:%s>'):format(tostring(value))
-end
-
-local function get_unit_name(unit)
-    return dfhack.df2console(dfhack.units.getReadableName(unit, true))
-end
+local snapshot = reqscript('lorekeeper/snapshot')
 
 local function add_header(choices, text)
     table.insert(choices, {text=text, pen=COLOR_LIGHTCYAN})
 end
 
-local function add_unit_summary(choices, unit)
+local function add_unit_summary(choices, snapshot_data)
     add_header(choices, 'Identity')
-    table.insert(choices, {text=('Name: %s'):format(get_unit_name(unit))})
-    table.insert(choices, {text=('Profession: %s'):format(dfhack.units.getProfessionName(unit))})
-    table.insert(choices, {text=('Unit ID: %d'):format(unit.id)})
+    table.insert(choices, {text=('Name: %s'):format(snapshot_data.identity.name)})
+    table.insert(choices, {text=('Profession: %s'):format(snapshot_data.identity.profession)})
+    table.insert(choices, {text=('Unit ID: %d'):format(snapshot_data.identity.id)})
 
-    local soul = unit.status and unit.status.current_soul
-    if not soul then
+    if not snapshot_data.soul_present then
         table.insert(choices, {text='No current soul data is available.', pen=COLOR_YELLOW})
         return
     end
 
-    local personality = soul.personality
     add_header(choices, 'Thoughts')
-    if #personality.emotions == 0 then
+    if #snapshot_data.thoughts == 0 then
         table.insert(choices, {text='No recorded thoughts.'})
     else
-        for _, thought in ipairs(personality.emotions) do
+        for _, thought in ipairs(snapshot_data.thoughts) do
             table.insert(choices, {text=('- %s / %s / severity %d'):format(
-                get_enum_name(df.unit_thought_type, thought.thought),
-                get_enum_name(df.emotion_type, thought.type),
+                thought.thought_name,
+                thought.emotion_name,
                 thought.severity)})
         end
     end
 
     add_header(choices, 'Mental state')
-    table.insert(choices, {text=('Stress: %d'):format(personality.stress)})
-
-    local traits = {}
-    for facet, value in pairs(personality.traits) do
-        table.insert(traits, {
-            name=get_enum_name(df.personality_facet_type, facet),
-            value=value,
-        })
-    end
-    table.sort(traits, function(a, b) return a.name < b.name end)
+    table.insert(choices, {text=('Stress: %d'):format(snapshot_data.mental_state.stress)})
 
     add_header(choices, 'Personality facets')
-    for _, trait in ipairs(traits) do
-        table.insert(choices, {text=('%s: %d'):format(trait.name, trait.value)})
+    for _, facet in ipairs(snapshot_data.personality_facets) do
+        table.insert(choices, {text=('%s: %d'):format(facet.facet_name, facet.value)})
     end
 end
 
@@ -118,12 +85,12 @@ end
 
 function LorekeeperWindow:refresh()
     local choices = {}
-    local unit = dfhack.gui.getSelectedUnit(true)
+    local snapshot_data = snapshot.capture_selected_unit()
 
-    if not unit then
+    if not snapshot_data then
         table.insert(choices, {text='No unit is currently selected.', pen=COLOR_YELLOW})
     else
-        add_unit_summary(choices, unit)
+        add_unit_summary(choices, snapshot_data)
     end
 
     self.subviews.content:setChoices(choices)
