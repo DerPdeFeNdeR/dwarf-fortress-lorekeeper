@@ -120,11 +120,16 @@ Future history UI
 
 ### Milestone 4: optional `gpt-5-mini` helper
 
-- Add a small local service using the OpenAI Responses API.
-- Add structured output validation and bounded prompts.
-- Translate only cache misses or explicitly requested details.
+- Add a small local service using the OpenAI Responses API. **Implemented:**
+  `helper/server.py` binds to localhost and keeps the API key outside DFHack.
+- Add structured output validation and bounded prompts. **Implemented:** the
+  helper uses a strict JSON schema, input limits, output limits, and a timeout.
+- Translate only cache misses or explicitly requested details. **Implemented:**
+  cache keys include raw input, context, language, model, prompt, and schema.
 - Update the DFHack window when results arrive.
-- Add cache persistence, timeout, retry, and API failure handling.
+- Add cache persistence, timeout, retry, and API failure handling. **Partial:**
+  persistence, timeout, and explicit failure handling are implemented; retry
+  policy and DFHack/UI integration remain.
 
 **Exit criteria:** the game remains responsive with the helper offline, and repeated thoughts do not cause repeated API calls.
 

@@ -1,0 +1,7 @@
+# Python test/runtime artifacts
+__pycache__/
+*.py[cod]
+
+# Local helper cache and credentials/configuration
+.lorekeeper/
+translation-cache.json
