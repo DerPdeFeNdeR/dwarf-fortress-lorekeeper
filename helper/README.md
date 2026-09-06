@@ -37,3 +37,27 @@ python3 -m unittest discover -s . -p 'test_*.py'
 
 The helper is not yet called by the in-game window. That integration remains
 separate so the DFHack render loop never waits on a network request.
+
+## Codex CLI batch backend
+
+If Codex CLI is already authenticated with ChatGPT, queued translations can
+be processed without an API key. Put a JSON array of pending items in a file:
+
+```json
+[
+  {"id":"thought:SatisfiedAtWork","kind":"thought","raw":"SatisfiedAtWork"},
+  {"id":"emotion:SATISFACTION","kind":"emotion","raw":"SATISFACTION"}
+]
+```
+
+Then run one bounded batch:
+
+```bash
+python3 helper/codex_batch.py pending.json results.json
+```
+
+The command deduplicates equivalent requests, sends at most 50 items through
+one `codex exec --ephemeral --sandbox read-only` invocation, validates the
+structured response, and writes `results.json`. It does not edit the
+repository or send dwarf names/IDs unless they are explicitly included in a
+request item.

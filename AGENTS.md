@@ -30,6 +30,15 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
 - Handle errors explicitly and preserve useful diagnostic context.
 - Write code that is easy to test; use fixtures for captured DFHack data and tests for translation rules and cache behavior.
 - Test changes before committing or pushing them. For in-game behavior, wait for in-game verification when a local automated test cannot reproduce the behavior.
+- Before committing or pushing, update the durable knowledge base when the
+  implementation, workflow, or verified environment has changed: update
+  `AGENTS.md` for lasting agent instructions and add a dated note or ADR for
+  evidence and technical decisions. Do not rely on the conversation as the
+  only record.
+- Test the real integration path before publishing it. A mocked unit test is
+  not enough for a CLI, network, DFHack, or game integration: run one bounded
+  end-to-end check when credentials and the local environment permit it, and
+  document any untested boundary explicitly.
 - When handing off a game-facing change, explicitly tell the user whether Dwarf Fortress must be restarted. A restart is required after changing DFHack script-path configuration; otherwise, first try rerunning the command, and recommend a restart if DFHack does not reload a changed or newly added module.
 - Refactor toward clarity when touching nearby code, but do not make unrelated rewrites.
 - During review, prioritize correctness, readability, maintainability, and regression risk over personal stylistic preference.
@@ -52,6 +61,23 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
 4. **History storage:** begin with JSONL files for easy inspection and portability; move to SQLite when querying by dwarf, date, event type, or relationships becomes important.
 5. **In-game summary view:** use DFHack GUI/view-screen facilities to detect the currently viewed or selected dwarf and open a dedicated, scrollable summary window. Group translated thoughts by category and severity, then show personality facets, stress/needs, relationships, and a concise overall interpretation. Preserve raw values and an “explain details” view for debugging and unknown translations. Keep the window independent of vanilla screen layout where possible.
 6. **History UI:** build a read-only desktop/web viewer for longer-term review. Useful views are a timeline, dwarf detail page, thought/personality breakdown, and filters by severity, category, and date.
+
+## Verified workflow discoveries
+
+- The optional Codex translation backend is a batch worker, not a synchronous
+  DFHack dependency. `helper/codex_batch.py` deduplicates requests and sends
+  up to 50 items through one `codex exec --ephemeral --sandbox read-only`
+  invocation with JSON Schema output.
+- On 2026-09-06, `codex login status` reported `Logged in using ChatGPT`, and
+  a real two-item batch returned validated structured results. This verifies
+  the local Codex CLI path, not in-game integration; the DFHack UI does not yet
+  invoke the batch worker.
+- Codex CLI may reuse ChatGPT-managed authentication for local workflows.
+  Platform API keys are a separate usage-billed path. Never copy Codex auth
+  files or API keys into the repository, DFHack scripts, queue data, or logs.
+- Before claiming a Codex backend is game-ready, add and run a DFHack-facing
+  queue command and verify that `lorekeeper/show` remains responsive while a
+  batch is pending. Report restart requirements explicitly.
 
 ## Suggested milestone order
 

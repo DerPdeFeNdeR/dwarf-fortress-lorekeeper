@@ -130,6 +130,8 @@ Future history UI
 - Add cache persistence, timeout, retry, and API failure handling. **Partial:**
   persistence, timeout, and explicit failure handling are implemented; retry
   policy and DFHack/UI integration remain.
+- **Codex CLI batch path implemented:** `helper/codex_batch.py` deduplicates
+  queued jobs and sends up to 50 items through one read-only `codex exec` call.
 
 **Exit criteria:** the game remains responsive with the helper offline, and repeated thoughts do not cause repeated API calls.
 
