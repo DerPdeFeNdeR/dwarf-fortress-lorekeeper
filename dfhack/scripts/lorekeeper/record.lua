@@ -11,12 +11,17 @@ if not snapshot_data then
     return
 end
 
-local path, error_message = history.append_snapshot(snapshot_data)
+local path, appended, error_message = history.append_snapshot(snapshot_data)
 if not path then
     print(('The Lorekeeper: could not record snapshot: %s'):format(error_message))
     return
 end
 
-print(('The Lorekeeper: recorded %s to %s'):format(
-    snapshot_data.identity.name,
-    path))
+if appended then
+    print(('The Lorekeeper: recorded %s to %s'):format(
+        snapshot_data.identity.name,
+        path))
+else
+    print(('The Lorekeeper: no changes for %s; history record skipped.'):format(
+        snapshot_data.identity.name))
+end
