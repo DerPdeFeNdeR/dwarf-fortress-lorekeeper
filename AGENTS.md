@@ -70,8 +70,16 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
   invocation with JSON Schema output.
 - On 2026-09-06, `codex login status` reported `Logged in using ChatGPT`, and
   a real two-item batch returned validated structured results. This verifies
-  the local Codex CLI path, not in-game integration; the DFHack UI does not yet
-  invoke the batch worker.
+  the local Codex CLI path.
+- On 2026-09-06, the full selected-dwarf path was verified in-game: a selected
+  dwarf was queued with `lorekeeper/translate`, processed with
+  `python3 helper/process_queue.py <queue.jsonl>`, and displayed by
+  `lorekeeper/show` after refresh. `show` currently presents a current-state
+  summary, not a historical story.
+- DFHack UI text uses a CP437-oriented display path while Codex returns Unicode.
+  Translation cache display fields are therefore ASCII-safe/transliterated;
+  the authoritative snapshot and the Identity section retain the original
+  dwarf name and raw values.
 - Codex CLI may reuse ChatGPT-managed authentication for local workflows.
   Platform API keys are a separate usage-billed path. Never copy Codex auth
   files or API keys into the repository, DFHack scripts, queue data, or logs.

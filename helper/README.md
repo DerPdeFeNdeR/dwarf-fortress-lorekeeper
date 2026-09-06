@@ -61,3 +61,15 @@ one `codex exec --ephemeral --sandbox read-only` invocation, validates the
 structured response, and writes `results.json`. It does not edit the
 repository or send dwarf names/IDs unless they are explicitly included in a
 request item.
+
+For the DFHack queue, process the game-generated JSONL file and write the
+cache that `lorekeeper/show` reads:
+
+```bash
+python3 helper/process_queue.py \
+  /path/to/save/region3/lorekeeper-translation-queue.jsonl
+```
+
+Repeat the command whenever new jobs are queued. It skips IDs already present
+in the result cache and writes that cache beside the queue. An explicit second
+path is still supported when needed.

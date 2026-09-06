@@ -126,7 +126,9 @@ Future history UI
   helper uses a strict JSON schema, input limits, output limits, and a timeout.
 - Translate only cache misses or explicitly requested details. **Implemented:**
   cache keys include raw input, context, language, model, prompt, and schema.
-- Update the DFHack window when results arrive.
+- **Partial implementation:** `lorekeeper/translate` queues a selected dwarf,
+  `helper/process_queue.py` runs the batch and persists results, and
+  `lorekeeper/show` displays the latest cached explanation after refresh.
 - Add cache persistence, timeout, retry, and API failure handling. **Partial:**
   persistence, timeout, and explicit failure handling are implemented; retry
   policy and DFHack/UI integration remain.

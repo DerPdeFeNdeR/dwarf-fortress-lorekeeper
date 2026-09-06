@@ -6,6 +6,7 @@ local gui = require('gui')
 local widgets = require('gui.widgets')
 local snapshot = reqscript('lorekeeper/snapshot')
 local glossary = reqscript('lorekeeper/glossary')
+local translation = reqscript('lorekeeper/translation')
 
 local function add_header(choices, text)
     table.insert(choices, {text=text, pen=COLOR_LIGHTCYAN})
@@ -16,6 +17,19 @@ local function add_unit_summary(choices, snapshot_data)
     table.insert(choices, {text=('Name: %s'):format(snapshot_data.identity.name)})
     table.insert(choices, {text=('Profession: %s'):format(snapshot_data.identity.profession)})
     table.insert(choices, {text=('Unit ID: %d'):format(snapshot_data.identity.id)})
+
+    local model_summary = translation.get_latest_summary(snapshot_data.identity.id)
+    add_header(choices, 'Model interpretation')
+    if model_summary then
+        table.insert(choices, {text=('Summary: %s'):format(model_summary.text)})
+        table.insert(choices, {text=('Category: %s / confidence %s'):format(
+            model_summary.category or '<unknown>',
+            model_summary.confidence or '<unknown>')})
+        table.insert(choices, {text=('Explanation: %s'):format(model_summary.explanation)})
+    else
+        table.insert(choices, {text='No cached model explanation.'})
+        table.insert(choices, {text='Run lorekeeper/translate, process the queue, then refresh.'})
+    end
 
     if not snapshot_data.soul_present then
         table.insert(choices, {text='No current soul data is available.', pen=COLOR_YELLOW})

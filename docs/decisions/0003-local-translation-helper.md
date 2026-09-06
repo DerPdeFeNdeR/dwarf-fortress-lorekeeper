@@ -23,3 +23,6 @@ error when no key is configured.
 - The first implementation requires a separately launched local process.
 - Model output is advisory; raw DF values and deterministic glossary labels
   remain authoritative.
+- The DFHack bridge is file-based: `lorekeeper/translate` queues a selected
+  snapshot, and `helper/process_queue.py` writes a cache that `lorekeeper/show`
+  reads on refresh. This keeps the game independent of the Codex process.

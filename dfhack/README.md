@@ -110,6 +110,18 @@ To run the collector policy tests without writing to the history file:
 lorekeeper/test
 ```
 
+To queue the selected dwarf for an asynchronous Codex explanation:
+
+```text
+lorekeeper/translate
+```
+
+This writes a structured request to `lorekeeper-translation-queue.jsonl` in
+the active save directory. From WSL, run `helper/process_queue.py` with that
+queue path and a result path named `lorekeeper-translation-cache.json`; then
+run `lorekeeper/show` again or press refresh. The game-facing command never
+waits for Codex and never contains an API key.
+
 If DFHack cannot find the command, confirm the path has no quotes, restart the
 game completely, and check that the repository file exists at
 `dfhack/scripts/lorekeeper/dump.lua`.
