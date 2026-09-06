@@ -108,3 +108,24 @@ wsl.exe -- bash -lc "bash /mnt/c/users/contr/projects/dwarf-fortress-lorekeeper/
 
 The wrapper does not register a task or change Windows settings itself. The
 one-time task registration remains an explicit user setup step.
+
+To register the watcher at Windows logon, run PowerShell as the user who will
+play the game:
+
+```powershell
+.\helper\install_watcher_task.ps1
+```
+
+Validate the Windows-side setup without registering the task:
+
+```powershell
+.\helper\install_watcher_task.ps1 -WhatIf
+```
+
+Override paths when needed:
+
+```powershell
+.\helper\install_watcher_task.ps1 -ProjectPath 'C:\path\to\dwarf-fortress-lorekeeper' -SaveDirectory 'C:\path\to\Dwarf Fortress\save'
+```
+
+The script creates or replaces only the named `Lorekeeper Queue Watcher` task.

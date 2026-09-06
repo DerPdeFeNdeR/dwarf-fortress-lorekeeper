@@ -153,6 +153,12 @@ Future history UI
   processes new stories automatically. `helper/watch_save_directory.py` now
   follows all save regions, and `helper/start_watcher.sh` is ready for login
   startup; task registration/installation remains.
+- **Preferred startup:** investigate a DFHack/game-start integration for
+  launching or signaling the external watcher, while preserving the external
+  process boundary for Codex and credentials.
+- **Startup setup:** `helper/install_watcher_task.ps1` now provides an explicit
+  Windows-logon setup path while the preferred DFHack-start integration remains
+  future work.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.

@@ -55,6 +55,13 @@
 - `helper/start_watcher.sh` is the portable startup wrapper. It resolves the
   repository path and launches the save-directory watcher; Windows Task
   Scheduler registration remains an explicit user setup step.
+- `helper/install_watcher_task.ps1` provides that explicit Windows Task
+  Scheduler registration. It must be run by the user and accepts project/save
+  path overrides; never register tasks automatically from repository actions.
+- User preference: when the product is ready for broader use, prefer starting
+  the translation watcher with DFHack/Dwarf Fortress startup rather than
+  requiring a separate Windows login task. Keep model execution outside DFHack
+  so the game loop and credentials remain isolated.
 
 ## Coding and review standard
 
