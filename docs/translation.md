@@ -25,3 +25,14 @@ the raw IDs and values from the snapshot so labels can be corrected or
 retranslated later. A future local model helper should accept only bounded,
 explicit inputs, return this same shape plus model metadata, and remain
 optional and asynchronous.
+
+## User-facing queue workflow
+
+The DFHack `lorekeeper/translate` and `lorekeeper/story` commands write JSONL
+jobs to the active save directory. Running `helper/process_queue.py` manually
+is currently a development bridge, not the intended user workflow.
+
+The finished product should run a background local watcher that notices queued
+jobs and updates the cache without requiring the player to leave Dwarf
+Fortress. The in-game UI should show pending, ready, and failure states while
+the helper remains outside DFHack for credentials and model execution.

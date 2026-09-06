@@ -372,6 +372,64 @@ function build_events(records)
     return events
 end
 
+local function summarize_snapshot(snapshot_data)
+    local thoughts = {}
+    for _, thought in ipairs(snapshot_data.thoughts) do
+        table.insert(thoughts, {
+            thought=thought.thought_name,
+            emotion=thought.emotion_name,
+            severity=thought.severity,
+        })
+    end
+
+    return {
+        profession=snapshot_data.identity.profession,
+        stress=snapshot_data.mental_state.stress,
+        thoughts=thoughts,
+    }
+end
+
+function build_story_input(records)
+    if #records == 0 then
+        return nil
+    end
+
+    local first_snapshot = records[1].snapshot
+    local story_input = {
+        schema_version=1,
+        identity=first_snapshot.identity,
+        events={},
+    }
+
+    for _, event in ipairs(build_events(records)) do
+        if event.kind == 'baseline' then
+            table.insert(story_input.events, {
+                kind=event.kind,
+                time=event.record.ingame_time,
+                snapshot=summarize_snapshot(event.record.snapshot),
+            })
+        elseif event.kind == 'stress_trend' then
+            table.insert(story_input.events, {
+                kind=event.kind,
+                start_time=event.start_record.ingame_time,
+                end_time=event.end_record.ingame_time,
+                from_stress=event.from_stress,
+                to_stress=event.to_stress,
+                snapshot_count=event.snapshot_count,
+            })
+        else
+            table.insert(story_input.events, {
+                kind=event.kind,
+                time=event.record.ingame_time,
+                changes=event.changes,
+                snapshot=summarize_snapshot(event.record.snapshot),
+            })
+        end
+    end
+
+    return story_input
+end
+
 function get_history_path()
     if not dfhack.isWorldLoaded() then
         return nil, 'no world is loaded'

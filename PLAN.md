@@ -147,6 +147,8 @@ Future history UI
 - **Grouped timeline:** history output now coalesces consecutive stress-only
   changes and preserves discrete thought, profession, and personality changes
   as structured events.
+- **Cached story view:** `lorekeeper/history/show` displays the cached Codex
+  story and grouped timeline in a scrollable in-game window.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.

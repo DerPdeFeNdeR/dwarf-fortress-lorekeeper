@@ -59,6 +59,30 @@ function get_latest_summary(unit_id)
     return latest_result
 end
 
+function get_latest_story(unit_id)
+    local cache = load_cache()
+    if not cache then
+        return nil
+    end
+
+    local prefix = ('dwarf-history:%d:'):format(unit_id)
+    local latest_time
+    local latest_result
+    for request_id, result in pairs(cache) do
+        if type(request_id) == 'string' and request_id:sub(1, #prefix) == prefix and
+                type(result) == 'table' then
+            local year, year_tick = request_id:match('^dwarf%-history:%d+:(%d+):(%d+)$')
+            local time = year and tonumber(year) * 1000000 + tonumber(year_tick)
+            if time and (not latest_time or time > latest_time) then
+                latest_time = time
+                latest_result = result
+            end
+        end
+    end
+
+    return latest_result
+end
+
 function get_cache_path_for_display()
     return get_cache_path()
 end

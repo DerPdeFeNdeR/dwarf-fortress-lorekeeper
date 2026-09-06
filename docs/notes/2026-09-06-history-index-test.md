@@ -28,6 +28,13 @@ The grouped timeline was verified for Mistêm Oslandakas:
   same snapshot.
 - `lorekeeper/test` reported 23 passing DFHack tests.
 
+The dedicated history window was then verified for Mistêm:
+
+- `lorekeeper/history/show` displayed the cached story with high confidence.
+- It displayed 30 records and 18 grouped timeline events.
+- The window rendered the accented dwarf name correctly and remained usable for
+  scrolling through the timeline.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.

@@ -104,6 +104,25 @@ first history lookup builds a fortress-wide sidecar index in
 `lorekeeper-history-index`; later dwarf lookups avoid rescanning the master
 JSONL file.
 
+To queue the selected dwarf's grouped history for an asynchronous Codex story:
+
+```text
+lorekeeper/story
+```
+
+This writes a JSONL job without waiting for Codex. Process it with
+`helper/process_queue.py`; the structured result is cached beside the active
+save for a later history/story view.
+
+To read the cached story and grouped timeline in-game:
+
+```text
+lorekeeper/history/show
+```
+
+The window supports scrolling, refresh with `R`, copying with `Ctrl+C`, and
+closing with `Esc`.
+
 To start or stop the all-citizen background collector:
 
 ```text
