@@ -7,8 +7,17 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$wslProjectPath = (wsl.exe wslpath -a $ProjectPath).Trim()
-$wslSaveDirectory = (wsl.exe wslpath -a $SaveDirectory).Trim()
+function Convert-WindowsPathToWsl([string]$Path) {
+    $normalizedPath = $Path -replace '\\', '/'
+    $convertedPath = (wsl.exe wslpath -a $normalizedPath).Trim()
+    if (-not $convertedPath) {
+        throw "Could not convert Windows path '$Path' through WSL."
+    }
+    return $convertedPath
+}
+
+$wslProjectPath = Convert-WindowsPathToWsl $ProjectPath
+$wslSaveDirectory = Convert-WindowsPathToWsl $SaveDirectory
 if (-not $wslProjectPath -or -not $wslSaveDirectory) {
     throw 'Could not convert the project or save path through WSL.'
 }
