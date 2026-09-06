@@ -80,6 +80,16 @@ To copy the catalog to the system clipboard:
 lorekeeper/tokens copy
 ```
 
+To append one selected dwarf snapshot to the current fortress history file:
+
+```text
+lorekeeper/record
+```
+
+Records are written as newline-delimited JSON to the active save directory at
+`lorekeeper-history.jsonl`. The command records only when explicitly run; it
+does not poll or modify game state.
+
 If DFHack cannot find the command, confirm the path has no quotes, restart the
 game completely, and check that the repository file exists at
 `dfhack/scripts/lorekeeper/dump.lua`.
