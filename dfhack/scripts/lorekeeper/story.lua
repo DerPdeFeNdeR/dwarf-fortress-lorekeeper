@@ -5,6 +5,7 @@
 local json = require('json')
 local snapshot = reqscript('lorekeeper/snapshot')
 local history = reqscript('lorekeeper/history')
+local STORY_REQUEST_VERSION = 3
 
 local function get_queue_path()
     if not dfhack.isWorldLoaded() then
@@ -52,13 +53,14 @@ if not ok then
 end
 
 local latest_time = records[#records].ingame_time
-local request_id = ('dwarf-history-v2:%d:%d:%d'):format(
+local request_id = ('dwarf-history-v%d:%d:%d:%d'):format(
+    STORY_REQUEST_VERSION,
     snapshot_data.identity.id, latest_time.year, latest_time.year_tick)
 local request_record = {
     id=request_id,
     kind='dwarf_history',
     raw=encoded_input,
-    context='Write a concise, factual Dwarf Fortress history for this dwarf from the supplied timeline. Use only supplied events. Do not invent names, causes, relationships, or events. Mention uncertainty when the timeline is sparse. Return a readable story, not a data summary.',
+    context='Write a concise, factual Dwarf Fortress history for this dwarf from the supplied timeline. Use only supplied events. Do not invent names, causes, relationships, or events. When referring to the dwarf by name, copy identity.name exactly, including every Unicode character. Mention uncertainty when the timeline is sparse. Return a readable story, not a data summary.',
     language='en',
 }
 

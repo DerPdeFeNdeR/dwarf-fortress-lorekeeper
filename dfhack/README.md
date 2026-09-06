@@ -137,6 +137,23 @@ and writes only changed snapshots. It limits each dwarf to one emitted record
 per in-game day while still checking for changes. It is disabled by default
 and stops when the world unloads.
 
+To start the collector automatically whenever a fortress loads, add this line
+to the DFHack initialization file:
+
+```text
+lorekeeper/autostart
+```
+
+The file is normally:
+
+```text
+C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\dfhack.init
+```
+
+Fully exit and restart Dwarf Fortress after changing `dfhack.init`. The
+collector can still be stopped or inspected with `lorekeeper/collect stop` and
+`lorekeeper/collect status`.
+
 To run the collector policy tests without writing to the history file:
 
 ```text

@@ -64,7 +64,9 @@ queues are processed independently and that unchanged queues are not rerun.
 Unicode cache handling was verified with the active save. The helper now writes
 escaped Unicode rather than transliterating model text, and the in-game history
 window displays `Mistêm Oslandakas` correctly after the watcher processes a
-fresh story job.
+fresh story job. A later Doren story exposed CP437 mojibake in model-generated
+name text; the queue processor now repairs that known form and story requests
+use version 3 so the corrected path is regenerated.
 
 The collector prewarm path was also verified:
 
@@ -84,9 +86,9 @@ The collector prewarm path was also verified:
 - New dwarves do not need index maintenance manually. Once a snapshot is
   recorded by `lorekeeper/record` or the collector, their sidecar is created or
   updated automatically.
-- The collector is still manually started. It now prewarms the index during its
-  existing startup scan; automatic world-load initialization remains a future
-  improvement so users do not need to start the collector for history lookup.
+- The collector prewarms the index during its startup scan. The optional
+  `lorekeeper/autostart` hook now starts it on world load when enabled in
+  `dfhack.init`.
 
 ## Automated checks
 

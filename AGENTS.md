@@ -30,9 +30,8 @@
   history lookup builds that index in one pass; later dwarf lookups use the
   per-dwarf cache. New records update an existing index and create caches for
   new dwarves once they are recorded. Starting the collector prewarms the
-  index during its existing history scan; the collector remains manually
-  started for now, and history indexing should eventually initialize
-  incrementally without requiring a user command.
+  index during its existing history scan; `lorekeeper/autostart` can start the
+  collector automatically on world load when enabled in `dfhack.init`.
 - `lorekeeper/history` preserves raw records while presenting a grouped event
   timeline: baseline, coalesced stress trends, and discrete thought,
   profession, or personality changes.
@@ -58,6 +57,9 @@
 - `helper/install_watcher_task.ps1` provides that explicit Windows Task
   Scheduler registration. It must be run by the user and accepts project/save
   path overrides; never register tasks automatically from repository actions.
+- `dfhack/scripts/lorekeeper/autostart.lua` provides the explicit DFHack-side
+  collector startup hook. It is enabled by adding `lorekeeper/autostart` to
+  `dfhack.init`; repository actions must never edit the user's DFHack config.
 - User preference: when the product is ready for broader use, prefer starting
   the translation watcher with DFHack/Dwarf Fortress startup rather than
   requiring a separate Windows login task. Keep model execution outside DFHack

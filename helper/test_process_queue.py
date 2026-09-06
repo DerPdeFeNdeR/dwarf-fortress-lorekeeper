@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from process_queue import load_results, process_queue, write_results
+from process_queue import load_results, process_queue, repair_story_names, write_results
 
 
 class QueueTests(unittest.TestCase):
@@ -69,6 +69,19 @@ class QueueTests(unittest.TestCase):
             self.assertEqual(load_results(path)['a']['text'], 'Eral èrithbomrek')
             self.assertNotIn(b'\xc3\xa8', path.read_bytes())
             self.assertIn(b'\\u00e8', path.read_bytes())
+
+    def test_repairs_cp437_mojibake_in_story_name(self):
+        item = {
+            'id': 'story',
+            'kind': 'dwarf_history',
+            'raw': json.dumps({'identity': {'name': 'Doren ònulokil, Woodcutter'}}),
+        }
+        result = {
+            'id': 'story',
+            'text': 'In year 102, Doren ├▓nulokil worked as a woodcutter.',
+        }
+        repair_story_names([item], [result])
+        self.assertEqual(result['text'], 'In year 102, Doren ònulokil worked as a woodcutter.')
 
 
 if __name__ == '__main__':

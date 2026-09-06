@@ -61,6 +61,26 @@ def write_results(path: Path, results: dict[str, Any]) -> None:
     os.replace(temporary_path, path)
 
 
+def repair_story_names(items: list[dict[str, Any]], results: list[dict[str, Any]]) -> None:
+    """Replace CP437-mojibake names in model prose with the source name."""
+    items_by_id = {item.get('id'): item for item in items}
+    for result in results:
+        item = items_by_id.get(result.get('id'))
+        if not item or item.get('kind') != 'dwarf_history':
+            continue
+        try:
+            story_input = json.loads(item['raw'])
+            full_name = story_input['identity']['name']
+        except (KeyError, TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(full_name, str) or not isinstance(result.get('text'), str):
+            continue
+        personal_name = full_name.split(',', 1)[0]
+        for source_name in (full_name, personal_name):
+            mojibake_name = source_name.encode('utf-8').decode('cp437')
+            result['text'] = result['text'].replace(mojibake_name, source_name)
+
+
 def process_queue(queue_path: Path, result_path: Path) -> int:
     queued_items = normalize_items(load_queue(queue_path))
     cached_results = load_results(result_path)
@@ -71,6 +91,7 @@ def process_queue(queue_path: Path, result_path: Path) -> int:
         return 0
 
     batch = run_batch(pending_items)
+    repair_story_names(pending_items, batch['results'])
     for result in batch['results']:
         cached_results[result['id']] = result
     write_results(result_path, cached_results)

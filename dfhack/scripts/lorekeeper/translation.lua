@@ -77,7 +77,7 @@ function get_latest_story(unit_id)
         return nil
     end
 
-    local prefix = ('dwarf-history-v2:%d:'):format(unit_id)
+    local prefix = ('dwarf-history-v3:%d:'):format(unit_id)
     local latest_time
     local latest_result
     for request_id, result in pairs(cache) do
@@ -97,7 +97,7 @@ function get_latest_story(unit_id)
 end
 
 function get_story_status(unit_id, ingame_time)
-    local request_id = ('dwarf-history-v2:%d:%d:%d'):format(
+    local request_id = ('dwarf-history-v3:%d:%d:%d'):format(
         unit_id, ingame_time.year, ingame_time.year_tick)
     local cache = load_cache()
     if cache and type(cache[request_id]) == 'table' then

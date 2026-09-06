@@ -159,6 +159,8 @@ Future history UI
 - **Startup setup:** `helper/install_watcher_task.ps1` now provides an explicit
   Windows-logon setup path while the preferred DFHack-start integration remains
   future work.
+- **Collector startup:** `lorekeeper/autostart` now provides an explicit
+  `dfhack.init` hook that starts collection on world load; users must opt in.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.

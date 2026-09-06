@@ -41,10 +41,11 @@ The preferred future startup behavior is for DFHack/Dwarf Fortress startup to
 launch or signal the external watcher. The current login-task/wrapper approach
 is an interim development setup.
 
-History story jobs use the `dwarf-history-v2` request namespace and include
+History story jobs use the `dwarf-history-v3` request namespace and include
 grouped events plus exact thought and personality changes. The cache key is
 versioned so changes to that payload contract force a fresh model result.
 
 The helper cache writer preserves Unicode by using JSON Unicode escapes. This
 keeps the cache ASCII-safe for DFHack while allowing names and model prose to
-round-trip with their original characters.
+round-trip with their original characters. The queue processor also repairs a
+known CP437-mojibake form of a dwarf name in newly generated story prose.
