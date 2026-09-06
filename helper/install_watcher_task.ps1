@@ -25,7 +25,7 @@ if (-not $wslProjectPath -or -not $wslSaveDirectory) {
 $command = "bash '$wslProjectPath/helper/start_watcher.sh' '$wslSaveDirectory'"
 $action = New-ScheduledTaskAction -Execute 'wsl.exe' -Argument "-- bash -lc `"$command`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel LeastPrivilege
+$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
 $description = 'Watches Dwarf Fortress save queues for Lorekeeper jobs.'
 
 if ($WhatIf) {
