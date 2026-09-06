@@ -14,7 +14,8 @@ end
 
 local function add_unit_summary(choices, snapshot_data)
     add_header(choices, 'Identity')
-    table.insert(choices, {text=('Name: %s'):format(snapshot_data.identity.name)})
+    table.insert(choices, {text=('Name: %s'):format(
+        dfhack.utf2df(snapshot_data.identity.name))})
     table.insert(choices, {text=('Profession: %s'):format(snapshot_data.identity.profession)})
     table.insert(choices, {text=('Unit ID: %d'):format(snapshot_data.identity.id)})
 

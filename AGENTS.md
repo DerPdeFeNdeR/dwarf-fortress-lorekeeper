@@ -16,6 +16,13 @@
 - Account for DF/DFHack updates: keep a small compatibility layer and record the game/DFHack version with collected data.
 - Avoid storing only dwarf IDs. IDs can be useful within a world, but names, race, site/world identity, and timestamps should also be retained where available.
 - Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The initial cloud translation model is OpenAI `gpt-5-mini`; keep the model configurable for later benchmarking.
+- History currently uses the append-only `lorekeeper-history.jsonl` file plus a
+  fortress-wide sidecar index under `lorekeeper-history-index/`. The first
+  history lookup builds that index in one pass; later dwarf lookups use the
+  per-dwarf cache. New records update an existing index and create caches for
+  new dwarves once they are recorded. The collector remains manually started
+  for now; history indexing should eventually initialize incrementally without
+  requiring a user command.
 
 ## Coding and review standard
 

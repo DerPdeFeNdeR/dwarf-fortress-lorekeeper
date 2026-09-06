@@ -26,7 +26,7 @@ end
 local function get_display_name(unit)
     local name = dfhack.units.getReadableName(unit, true)
     if name and name ~= '' then
-        return dfhack.df2console(name)
+        return dfhack.df2utf(name)
     end
 
     return '<unnamed>'

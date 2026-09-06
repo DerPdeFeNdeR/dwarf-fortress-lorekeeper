@@ -91,6 +91,18 @@ Records are written as newline-delimited JSON to the active save directory at
 is skipped. The command records only when explicitly run; it does not poll or
 modify game state.
 
+To inspect the selected dwarf's recorded timeline and detected changes:
+
+```text
+lorekeeper/history
+```
+
+This is currently a read-only text timeline. It reports snapshot times,
+stress, thought counts, and changes in profession, thoughts, stress, and
+personality facets. The first history lookup builds a fortress-wide sidecar
+index in `lorekeeper-history-index`; later dwarf lookups avoid rescanning the
+master JSONL file.
+
 To start or stop the all-citizen background collector:
 
 ```text

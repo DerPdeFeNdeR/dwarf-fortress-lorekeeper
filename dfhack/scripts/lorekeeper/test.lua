@@ -159,6 +159,14 @@ assert_true(glossary.describe_emotion('SATISFACTION').known,
 assert_true(glossary.describe_facet('VENGEFUL').known,
     'labels the full personality facet set')
 
+local no_changes = history.describe_changes(fixture, subthought_changed)
+assert_true(#no_changes == 0,
+    'history ignores subthought-only changes')
+
+local history_change = history.describe_changes(fixture, thought_added)
+assert_true(#history_change == 1 and history_change[1]:find('thoughts changed'),
+    'history describes thought changes')
+
 local unknown_thought = glossary.describe_thought('FutureThoughtToken')
 assert_true(not unknown_thought.known and unknown_thought.source == 'unknown' and
         unknown_thought.confidence == 'none' and

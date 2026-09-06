@@ -140,6 +140,10 @@ Future history UI
 ### Milestone 5: history records and UI foundation
 
 - Emit meaningful thought/personality/event changes as JSONL.
+- **Initial implementation:** `lorekeeper/history` reads selected-dwarf JSONL
+  records and reports detected changes in a read-only timeline. It builds a
+  fortress-wide sidecar index on first use so each dwarf does not trigger a
+  separate full-file scan.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.
