@@ -93,3 +93,18 @@ python3 helper/watch_save_directory.py \
 
 This is the preferred target for a future Windows/WSL login task because it
 continues working when the active region changes.
+
+The repository includes a startup wrapper that resolves its own project path:
+
+```bash
+bash helper/start_watcher.sh
+```
+
+For automatic startup, configure Windows Task Scheduler to run at user logon:
+
+```text
+wsl.exe -- bash -lc "bash /mnt/c/users/contr/projects/dwarf-fortress-lorekeeper/helper/start_watcher.sh"
+```
+
+The wrapper does not register a task or change Windows settings itself. The
+one-time task registration remains an explicit user setup step.

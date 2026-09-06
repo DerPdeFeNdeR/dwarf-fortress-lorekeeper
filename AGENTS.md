@@ -49,6 +49,9 @@
   or launcher should start the save-directory watcher automatically. Prefer
   `helper/watch_save_directory.py` for startup because it follows all regions
   beneath the Dwarf Fortress save directory.
+- `helper/start_watcher.sh` is the portable startup wrapper. It resolves the
+  repository path and launches the save-directory watcher; Windows Task
+  Scheduler registration remains an explicit user setup step.
 
 ## Coding and review standard
 
