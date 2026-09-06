@@ -20,6 +20,14 @@ The first lookup builds the fortress-wide sidecar index. The second lookup for
 another dwarf was substantially faster and did not require another full scan.
 The timeline reported stress changes and a thought addition for Eral.
 
+The collector prewarm path was also verified:
+
+- `lorekeeper/collect start` started for 68 citizens.
+- `lorekeeper/collect status` reported 828 scans and 68 records written.
+- `lorekeeper/collect stop` completed normally.
+- `lorekeeper/history` then loaded 30 records for Mistêm Oslandakas and
+  reported stress and thought changes.
+
 ## Design notes
 
 - The master JSONL remains the authoritative append-only history.
@@ -30,9 +38,9 @@ The timeline reported stress changes and a thought addition for Eral.
 - New dwarves do not need index maintenance manually. Once a snapshot is
   recorded by `lorekeeper/record` or the collector, their sidecar is created or
   updated automatically.
-- The collector is still manually started. Automatic incremental index
-  initialization remains a future improvement so the first lookup need not
-  perform the one-pass build interactively.
+- The collector is still manually started. It now prewarms the index during its
+  existing startup scan; automatic world-load initialization remains a future
+  improvement so users do not need to start the collector for history lookup.
 
 ## Automated checks
 

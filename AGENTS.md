@@ -20,9 +20,10 @@
   fortress-wide sidecar index under `lorekeeper-history-index/`. The first
   history lookup builds that index in one pass; later dwarf lookups use the
   per-dwarf cache. New records update an existing index and create caches for
-  new dwarves once they are recorded. The collector remains manually started
-  for now; history indexing should eventually initialize incrementally without
-  requiring a user command.
+  new dwarves once they are recorded. Starting the collector prewarms the
+  index during its existing history scan; the collector remains manually
+  started for now, and history indexing should eventually initialize
+  incrementally without requiring a user command.
 
 ## Coding and review standard
 

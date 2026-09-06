@@ -68,7 +68,7 @@ local function read_snapshot_records(path, dwarf_id)
     return records
 end
 
-local function build_history_indexes(history_path, index_directory)
+local function build_history_indexes(history_path, index_directory, on_record)
     local source = io.open(history_path, 'r')
     if not source then
         local marker = io.open(index_directory .. '/.complete', 'w')
@@ -82,6 +82,9 @@ local function build_history_indexes(history_path, index_directory)
         if record and record.record_type == 'dwarf_snapshot' and
                 record.snapshot and record.snapshot.identity and
                 record.snapshot.identity.id then
+            if on_record then
+                on_record(record)
+            end
             local dwarf_id = record.snapshot.identity.id
             local index = index_files[dwarf_id]
             if not index then
@@ -182,6 +185,23 @@ function load_latest_signatures()
     end
 
     local signatures = {}
+    local index_directory, index_error = get_history_index_directory()
+    if not index_directory then
+        return nil, index_error
+    end
+
+    local marker = io.open(index_directory .. '/.complete', 'r')
+    if not marker then
+        local built = build_history_indexes(path, index_directory, function(record)
+            signatures[record.snapshot.identity.id] = signature(record.snapshot)
+        end)
+        if not built then
+            return nil, ('could not build history index: %s'):format(index_directory)
+        end
+        return signatures, path
+    end
+    marker:close()
+
     local file = io.open(path, 'r')
     if not file then
         return signatures, path
