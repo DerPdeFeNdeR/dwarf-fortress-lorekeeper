@@ -121,14 +121,20 @@ function LorekeeperHistoryWindow:refresh()
         return
     end
 
-    local story = translation.get_latest_story(selected.identity.id)
+    local story_status, story = translation.get_story_status(
+        selected.identity.id, records[#records].ingame_time)
     add_header(choices, 'History story')
-    if story then
+    if story_status == 'ready' then
         add_wrapped(choices, story.text)
         table.insert(choices, {text=('Confidence: %s'):format(story.confidence or '<unknown>')})
+    elseif story_status == 'pending' then
+        table.insert(choices, {text='Story pending; the background watcher is processing it.',
+            pen=COLOR_YELLOW})
+        table.insert(choices, {text='Press R to refresh when processing finishes.'})
     else
-        table.insert(choices, {text='No cached story yet.', pen=COLOR_YELLOW})
-        table.insert(choices, {text='Run lorekeeper/story, then process the queue and refresh.'})
+        table.insert(choices, {text='No story has been requested for the latest timeline.',
+            pen=COLOR_YELLOW})
+        table.insert(choices, {text='Run lorekeeper/story, then press R to refresh.'})
     end
 
     local events = history.build_events(records)

@@ -121,7 +121,8 @@ lorekeeper/history/show
 ```
 
 The window supports scrolling, refresh with `R`, copying with `Ctrl+C`, and
-closing with `Esc`.
+closing with `Esc`. It reports whether the latest story is ready, pending, or
+not yet requested.
 
 To start or stop the all-citizen background collector:
 

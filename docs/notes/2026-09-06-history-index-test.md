@@ -50,6 +50,12 @@ The hands-off watcher path was verified afterward:
 - The watcher automatically processed one job, and the in-game history window
   displayed the updated cached story after refresh.
 
+The story lifecycle status was then verified during the same run. The history
+window displayed the current cached story after the watcher completed; because
+processing finished before the window opened, the transient pending state was
+not visible. The modal window pauses the game while open, and `R` rereads the
+cache without requiring a restart.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.
