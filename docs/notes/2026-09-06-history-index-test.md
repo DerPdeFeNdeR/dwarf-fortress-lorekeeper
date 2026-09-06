@@ -20,6 +20,14 @@ The first lookup builds the fortress-wide sidecar index. The second lookup for
 another dwarf was substantially faster and did not require another full scan.
 The timeline reported stress changes and a thought addition for Eral.
 
+The grouped timeline was verified for Mistêm Oslandakas:
+
+- 30 raw records were summarized as 18 events.
+- Consecutive stress-only changes were coalesced into stress trends.
+- Thought changes remained discrete events alongside any stress change at the
+  same snapshot.
+- `lorekeeper/test` reported 23 passing DFHack tests.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.

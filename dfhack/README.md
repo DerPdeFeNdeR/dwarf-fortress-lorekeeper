@@ -97,11 +97,12 @@ To inspect the selected dwarf's recorded timeline and detected changes:
 lorekeeper/history
 ```
 
-This is currently a read-only text timeline. It reports snapshot times,
-stress, thought counts, and changes in profession, thoughts, stress, and
-personality facets. The first history lookup builds a fortress-wide sidecar
-index in `lorekeeper-history-index`; later dwarf lookups avoid rescanning the
-master JSONL file.
+This is currently a read-only text timeline. It reports the raw snapshot count
+and a grouped event count, with baseline data, coalesced stress trends, and
+discrete changes in profession, thoughts, stress, and personality facets. The
+first history lookup builds a fortress-wide sidecar index in
+`lorekeeper-history-index`; later dwarf lookups avoid rescanning the master
+JSONL file.
 
 To start or stop the all-citizen background collector:
 

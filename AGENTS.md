@@ -24,6 +24,9 @@
   index during its existing history scan; the collector remains manually
   started for now, and history indexing should eventually initialize
   incrementally without requiring a user command.
+- `lorekeeper/history` preserves raw records while presenting a grouped event
+  timeline: baseline, coalesced stress trends, and discrete thought,
+  profession, or personality changes.
 
 ## Coding and review standard
 

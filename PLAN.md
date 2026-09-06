@@ -144,6 +144,9 @@ Future history UI
   records and reports detected changes in a read-only timeline. It builds a
   fortress-wide sidecar index on first use so each dwarf does not trigger a
   separate full-file scan.
+- **Grouped timeline:** history output now coalesces consecutive stress-only
+  changes and preserves discrete thought, profession, and personality changes
+  as structured events.
 - Add a SQLite importer/indexer when JSONL querying becomes awkward.
 - Build a read-only dwarf timeline and detail view outside the game.
 - Link history records back to raw source data and translation versions.

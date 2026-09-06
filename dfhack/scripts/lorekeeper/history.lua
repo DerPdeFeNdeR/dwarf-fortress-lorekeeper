@@ -309,6 +309,69 @@ function describe_changes(previous_snapshot, current_snapshot)
     return changes
 end
 
+local function is_stress_only(changes)
+    return #changes == 1 and changes[1]:find('^stress changed') ~= nil
+end
+
+function build_events(records)
+    local events = {}
+    if #records == 0 then
+        return events
+    end
+
+    table.insert(events, {
+        kind='baseline',
+        record=records[1],
+    })
+
+    local stress_event
+    local function flush_stress_event()
+        if stress_event then
+            table.insert(events, stress_event)
+            stress_event = nil
+        end
+    end
+
+    for index = 2, #records do
+        local previous = records[index - 1].snapshot
+        local current_record = records[index]
+        local current = current_record.snapshot
+        local changes = describe_changes(previous, current)
+        if #changes == 0 then
+            goto continue
+        end
+
+        if is_stress_only(changes) then
+            if not stress_event then
+                stress_event = {
+                    kind='stress_trend',
+                    start_record=records[index - 1],
+                    end_record=current_record,
+                    from_stress=previous.mental_state.stress,
+                    to_stress=current.mental_state.stress,
+                    snapshot_count=1,
+                }
+            else
+                stress_event.end_record = current_record
+                stress_event.to_stress = current.mental_state.stress
+                stress_event.snapshot_count = stress_event.snapshot_count + 1
+            end
+        else
+            flush_stress_event()
+            table.insert(events, {
+                kind='change',
+                record=current_record,
+                changes=changes,
+            })
+        end
+
+        ::continue::
+    end
+
+    flush_stress_event()
+    return events
+end
+
 function get_history_path()
     if not dfhack.isWorldLoaded() then
         return nil, 'no world is loaded'
@@ -446,15 +509,28 @@ if not dfhack_flags.module then
         return
     end
 
-    for index, record in ipairs(records) do
-        local time = record.ingame_time
-        local snapshot_data = record.snapshot
-        print(('  [%d] year %d, tick %d; stress %s; thoughts %d'):format(
-            index, time.year, time.year_tick,
-            tostring(snapshot_data.mental_state.stress or '<none>'),
-            #snapshot_data.thoughts))
-        if index > 1 then
-            for _, change in ipairs(describe_changes(records[index - 1].snapshot, snapshot_data)) do
+    local events = build_events(records)
+    print(('  events: %d'):format(#events))
+    for index, event in ipairs(events) do
+        if event.kind == 'baseline' then
+            local time = event.record.ingame_time
+            local snapshot_data = event.record.snapshot
+            print(('  [%d] baseline: year %d, tick %d; stress %s; thoughts %d'):format(
+                index, time.year, time.year_tick,
+                tostring(snapshot_data.mental_state.stress or '<none>'),
+                #snapshot_data.thoughts))
+        elseif event.kind == 'stress_trend' then
+            local start_time = event.start_record.ingame_time
+            local end_time = event.end_record.ingame_time
+            print(('  [%d] stress trend: %d to %d, %d snapshot(s), year %d tick %d to year %d tick %d'):format(
+                index, event.from_stress, event.to_stress, event.snapshot_count,
+                start_time.year, start_time.year_tick,
+                end_time.year, end_time.year_tick))
+        else
+            local time = event.record.ingame_time
+            print(('  [%d] change: year %d, tick %d'):format(
+                index, time.year, time.year_tick))
+            for _, change in ipairs(event.changes) do
                 print('      - ' .. change)
             end
         end

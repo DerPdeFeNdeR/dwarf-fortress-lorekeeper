@@ -167,6 +167,24 @@ local history_change = history.describe_changes(fixture, thought_added)
 assert_true(#history_change == 1 and history_change[1]:find('thoughts changed'),
     'history describes thought changes')
 
+local records = {
+    {ingame_time={year=1, year_tick=1}, snapshot=fixture},
+    {ingame_time={year=1, year_tick=2}, snapshot=large_stress_change},
+    {ingame_time={year=1, year_tick=3}, snapshot=(function()
+        local snapshot_data = copy_snapshot(large_stress_change)
+        snapshot_data.mental_state.stress = 2200
+        return snapshot_data
+    end)()},
+    {ingame_time={year=1, year_tick=4}, snapshot=thought_added},
+}
+local events = history.build_events(records)
+assert_true(#events == 3 and events[2].kind == 'stress_trend' and
+        events[2].snapshot_count == 2,
+    'groups consecutive stress changes into one event')
+assert_true(events[3].kind == 'change' and
+        events[3].changes[2]:find('thoughts changed') ~= nil,
+    'preserves discrete history changes as events')
+
 local unknown_thought = glossary.describe_thought('FutureThoughtToken')
 assert_true(not unknown_thought.known and unknown_thought.source == 'unknown' and
         unknown_thought.confidence == 'none' and
