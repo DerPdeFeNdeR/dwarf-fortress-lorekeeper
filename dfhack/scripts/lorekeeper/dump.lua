@@ -47,6 +47,8 @@ end
 print('The Lorekeeper: selected unit')
 print(('  df_version: %s'):format(snapshot_data.source.df_version))
 print(('  dfhack_version: %s'):format(snapshot_data.source.dfhack_version))
+print(('  site_id: %s'):format(tostring(snapshot_data.context.site_id or '<unknown>')))
+print(('  save_id: %s'):format(snapshot_data.context.save_id or '<unknown>'))
 print(('  id: %d'):format(snapshot_data.identity.id))
 print(('  name: %s'):format(snapshot_data.identity.name))
 print(('  race: %s'):format(snapshot_data.identity.race))

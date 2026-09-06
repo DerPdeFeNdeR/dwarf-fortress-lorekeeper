@@ -19,7 +19,8 @@ function signature(snapshot_data)
     append_signature_value(parts, identity.profession)
     append_signature_value(parts, identity.citizen)
     append_signature_value(parts, snapshot_data.soul_present)
-    append_signature_value(parts, snapshot_data.mental_state.stress // STRESS_SIGNATURE_BAND)
+    local stress = snapshot_data.mental_state.stress
+    append_signature_value(parts, stress and (stress // STRESS_SIGNATURE_BAND) or 'none')
 
     local thought_counts = {}
     for _, thought in ipairs(snapshot_data.thoughts) do

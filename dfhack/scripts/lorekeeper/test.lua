@@ -137,4 +137,13 @@ assert_true(not policy.should_record('old', 'new', 150, 200, 100),
 assert_true(policy.should_record('old', 'new', 100, 200, 100),
     'records after cooldown')
 
+local no_soul = copy_snapshot(fixture)
+no_soul.soul_present = false
+no_soul.mental_state.stress = nil
+no_soul.thoughts = {}
+no_soul.personality_facets = {}
+local no_soul_signature = history.signature(no_soul)
+assert_true(no_soul_signature ~= nil,
+    'signs snapshots without a soul')
+
 print(('The Lorekeeper: %d tests passed.'):format(passed))

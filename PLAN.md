@@ -137,35 +137,28 @@ Future history UI
 
 **Exit criteria:** a dwarf's thought history can be reviewed chronologically and regenerated when translation rules change.
 
-## Proposed record shape
+## Current record shape
+
+The implemented collector writes one `dwarf_snapshot` record per JSONL line.
+The exact contract, including raw IDs and version/context metadata, is in
+[`docs/schema.md`](docs/schema.md). The collector does not write translated
+prose; glossary and model output remain a separate concern.
 
 ```json
 {
   "schema_version": 1,
-  "record_type": "thought",
-  "game_version": "unknown",
-  "dfhack_version": "unknown",
-  "world_id": "...",
-  "site_id": "...",
-  "dwarf_id": 123,
-  "dwarf_name": "...",
-  "ingame_tick": 456789,
-  "captured_at": "2026-09-06T00:00:00Z",
-  "raw": {
-    "category": "...",
-    "severity": 0,
-    "text_tokens": ["..."]
-  },
-  "normalized": {
-    "category": "...",
-    "severity": 0
-  },
-  "translation": {
-    "text": "...",
-    "source": "glossary",
-    "model": null,
-    "prompt_version": "1",
-    "confidence": "high"
+  "record_type": "dwarf_snapshot",
+  "captured_at": "2026-09-06T16:40:19Z",
+  "ingame_time": {"year": 102, "year_tick": 47611},
+  "snapshot": {
+    "schema_version": 1,
+    "source": {"df_version": "...", "dfhack_version": "..."},
+    "context": {"site_id": 123, "save_id": "region3"},
+    "identity": {"id": 123, "name": "...", "profession": "Miner"},
+    "soul_present": true,
+    "mental_state": {"stress": 1000},
+    "thoughts": [],
+    "personality_facets": []
   }
 }
 ```
@@ -180,6 +173,18 @@ Future history UI
 - Compatibility code should be isolated because DFHack and game screen APIs can change.
 - Prefer small, testable modules over one large DFHack script.
 
+## Current status
+
+Milestones 0–3 are implemented for the current DF/DFHack environment:
+selected-dwarf dumping, the read-only summary window, deterministic glossary
+labels, JSONL recording, duplicate suppression, and the opt-in all-citizen
+collector with pure policy tests. The collector policy is documented in
+[`docs/decisions/0002-citizen-collector-policy.md`](docs/decisions/0002-citizen-collector-policy.md).
+
 ## Immediate next task
 
-Milestone 0 environment discovery and Milestone 1 raw selected-dwarf inspection are complete: `lorekeeper/dump` successfully displayed Mistêm Woundcolored's identity, raw thoughts/emotions, severities, stress, and all personality facets under DF 0.53.16 / DFHack 53.16-r1.1. The first read-only summary window is now implemented as `lorekeeper/show`; the next task is to test its layout, scrolling, refresh behavior, and no-selection handling in-game. Do not add history polling until the summary data model is stable.
+Finish the translation boundary before adding a model helper: define the
+glossary output contract, then add a local asynchronous helper with bounded
+requests and a persistent cache. The helper must preserve raw values, remain
+optional, and never block the DFHack render loop. After that, build the
+history importer and read-only timeline UI.

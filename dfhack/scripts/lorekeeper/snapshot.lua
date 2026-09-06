@@ -55,6 +55,19 @@ local function get_caste_name(unit)
     return '<unknown>'
 end
 
+local function get_context()
+    local context = {
+        site_id=df.global.plotinfo and df.global.plotinfo.site_id or nil,
+    }
+
+    local savegame = df.global.world.cur_savegame
+    if savegame and savegame.save_dir then
+        context.save_id = savegame.save_dir
+    end
+
+    return context
+end
+
 local function capture_thoughts(personality)
     local thoughts = {}
     for _, thought in ipairs(personality.emotions) do
@@ -100,6 +113,7 @@ function capture(unit)
             df_version=dfhack.getDFVersion(),
             dfhack_version=dfhack.getDFHackVersion(),
         },
+        context=get_context(),
         identity={
             id=unit.id,
             name=get_display_name(unit),
