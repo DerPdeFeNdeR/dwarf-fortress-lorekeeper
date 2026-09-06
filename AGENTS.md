@@ -29,6 +29,7 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
 - Keep interfaces small and stable; hide implementation details behind focused modules.
 - Handle errors explicitly and preserve useful diagnostic context.
 - Write code that is easy to test; use fixtures for captured DFHack data and tests for translation rules and cache behavior.
+- Test changes before committing or pushing them. For in-game behavior, wait for in-game verification when a local automated test cannot reproduce the behavior.
 - Refactor toward clarity when touching nearby code, but do not make unrelated rewrites.
 - During review, prioritize correctness, readability, maintainability, and regression risk over personal stylistic preference.
 

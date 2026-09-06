@@ -109,7 +109,7 @@ function LorekeeperWindow:init()
             key='LEAVESCREEN',
             label='Close ',
             auto_width=true,
-            on_activate=function() self:dismiss() end,
+            on_activate=function() self.parent_view:dismiss() end,
         },
     }
 
