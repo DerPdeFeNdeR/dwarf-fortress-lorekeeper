@@ -10,6 +10,7 @@ local thought_labels = {
     AdmireArrangedBuilding='Admired an arranged building',
     WatchPerform='Watched a performance',
     Syndrome='Experienced a syndrome-related effect',
+    SatisfiedAtWork='Felt satisfied at work',
 }
 
 local emotion_labels = {
@@ -18,31 +19,71 @@ local emotion_labels = {
     INTEREST='Interest',
     DELIGHT='Delight',
     EUPHORIA='Euphoria',
+    SATISFACTION='Satisfaction',
 }
 
 local facet_labels = {
     ABSTRACT_INCLINED='Abstract thinking',
     ACTIVITY_LEVEL='Activity level',
     ALTRUISM='Altruism',
+    AMBITION='Ambition',
     ANGER_PROPENSITY='Anger propensity',
     ANXIETY_PROPENSITY='Anxiety propensity',
     ART_INCLINED='Artistic inclination',
+    ASSERTIVENESS='Assertiveness',
+    BASHFUL='Bashfulness',
+    BRAVERY='Bravery',
     CHEER_PROPENSITY='Cheerfulness',
+    CLOSEMINDED='Closed-mindedness',
     CONFIDENCE='Confidence',
+    CRUELTY='Cruelty',
     CURIOUS='Curiosity',
     DEPRESSION_PROPENSITY='Depression propensity',
+    DISCORD='Disagreement propensity',
+    DISDAIN_ADVICE='Disdain for advice',
+    DUTIFULNESS='Dutifulness',
+    EMOTIONALLY_OBSESSIVE='Emotional obsessiveness',
+    ENVY_PROPENSITY='Envy propensity',
+    EXCITEMENT_SEEKING='Excitement seeking',
     FRIENDLINESS='Friendliness',
+    GRATITUDE='Gratitude',
+    GREED='Greed',
     GREGARIOUSNESS='Sociability',
+    HATE_PROPENSITY='Hate propensity',
+    HOPEFUL='Hopefulness',
+    HUMOR='Sense of humor',
+    IMAGINATION='Imagination',
+    IMMODERATION='Immoderation',
+    IMMODESTY='Immodesty',
+    LOVE_PROPENSITY='Love propensity',
+    LUST_PROPENSITY='Lust propensity',
+    ORDERLINESS='Orderliness',
+    PERFECTIONIST='Perfectionism',
+    PERSEVERANCE='Perseverance',
+    POLITENESS='Politeness',
+    PRIDE='Pride',
+    PRIVACY='Privacy',
+    SINGLEMINDED='Single-mindedness',
     STRESS_VULNERABILITY='Stress vulnerability',
     SWAYED_BY_EMOTIONS='Influence of emotions',
+    THOUGHTLESSNESS='Thoughtlessness',
+    TOLERANT='Tolerance',
     TRUST='Trust',
+    VANITY='Vanity',
+    VENGEFUL='Vengefulness',
+    VIOLENT='Violence',
+    WASTEFULNESS='Wastefulness',
 }
 
 local function unknown(kind, token)
     return {
+        schema_version=1,
+        kind=kind,
         known=false,
         text=('Unknown %s token: %s'):format(kind, token),
         raw=token,
+        source='unknown',
+        confidence='none',
     }
 end
 
@@ -53,9 +94,13 @@ local function describe(labels, kind, token)
     end
 
     return {
+        schema_version=1,
+        kind=kind,
         known=true,
         text=text,
         raw=token,
+        source='glossary',
+        confidence='high',
     }
 end
 

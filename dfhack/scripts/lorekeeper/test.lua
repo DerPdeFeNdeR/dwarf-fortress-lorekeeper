@@ -4,6 +4,7 @@
 
 local history = reqscript('lorekeeper/history')
 local policy = reqscript('lorekeeper/policy')
+local glossary = reqscript('lorekeeper/glossary')
 
 local passed = 0
 
@@ -145,5 +146,23 @@ no_soul.personality_facets = {}
 local no_soul_signature = history.signature(no_soul)
 assert_true(no_soul_signature ~= nil,
     'signs snapshots without a soul')
+
+local known_thought = glossary.describe_thought('Talked')
+assert_true(known_thought.known and known_thought.source == 'glossary' and
+        known_thought.confidence == 'high' and known_thought.raw == 'Talked',
+    'returns structured known glossary output')
+
+assert_true(glossary.describe_thought('SatisfiedAtWork').known,
+    'labels work satisfaction thoughts')
+assert_true(glossary.describe_emotion('SATISFACTION').known,
+    'labels satisfaction emotions')
+assert_true(glossary.describe_facet('VENGEFUL').known,
+    'labels the full personality facet set')
+
+local unknown_thought = glossary.describe_thought('FutureThoughtToken')
+assert_true(not unknown_thought.known and unknown_thought.source == 'unknown' and
+        unknown_thought.confidence == 'none' and
+        unknown_thought.raw == 'FutureThoughtToken',
+    'preserves unknown glossary tokens')
 
 print(('The Lorekeeper: %d tests passed.'):format(passed))
