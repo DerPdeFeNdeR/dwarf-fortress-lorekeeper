@@ -5,6 +5,7 @@
 local gui = require('gui')
 local widgets = require('gui.widgets')
 local snapshot = reqscript('lorekeeper/snapshot')
+local glossary = reqscript('lorekeeper/glossary')
 
 local function add_header(choices, text)
     table.insert(choices, {text=text, pen=COLOR_LIGHTCYAN})
@@ -26,9 +27,11 @@ local function add_unit_summary(choices, snapshot_data)
         table.insert(choices, {text='No recorded thoughts.'})
     else
         for _, thought in ipairs(snapshot_data.thoughts) do
+            local thought_description = glossary.describe_thought(thought.thought_name)
+            local emotion_description = glossary.describe_emotion(thought.emotion_name)
             table.insert(choices, {text=('- %s / %s / severity %d'):format(
-                thought.thought_name,
-                thought.emotion_name,
+                thought_description.text,
+                emotion_description.text,
                 thought.severity)})
         end
     end
@@ -38,7 +41,8 @@ local function add_unit_summary(choices, snapshot_data)
 
     add_header(choices, 'Personality facets')
     for _, facet in ipairs(snapshot_data.personality_facets) do
-        table.insert(choices, {text=('%s: %d'):format(facet.facet_name, facet.value)})
+        local facet_description = glossary.describe_facet(facet.facet_name)
+        table.insert(choices, {text=('%s: %d'):format(facet_description.text, facet.value)})
     end
 end
 
