@@ -57,6 +57,13 @@
   additions/removals, profession transitions, and personality facet changes.
   Change the request/schema version when the payload contract changes so stale
   cached stories are not reused.
+- The Python history view preserves append order. A backward (year, tick)
+  transition starts a `timeline_reset` segment with a fresh snapshot baseline;
+  never infer normal changes across that boundary or sort the records to hide it.
+  History-view schema v5 invalidates older prepared stories. A reset indicates
+  recorded time reversal, not proof of a save reload. On 2026-09-06 the user
+  verified Minkot's regenerated two-segment story and the final page's explicit
+  reset/fresh-baseline label in-game.
 - The local `helper/watch_queue.py` watcher is the hands-off development
   workflow: it monitors the active save queue, invokes Codex outside DFHack,
   and updates the cache while the player remains in-game. A future installer

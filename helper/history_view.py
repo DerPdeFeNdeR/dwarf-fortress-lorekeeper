@@ -9,6 +9,12 @@ from codex_batch import run_batch
 from process_queue import load_queue, load_results, write_results, repair_story_names
 
 _source_cache = {}
+VIEW_SCHEMA_VERSION = 5
+
+
+def time_key(record):
+    when = record['ingame_time']
+    return when['year'], when['year_tick']
 
 
 def thought_counts(snapshot):
@@ -24,6 +30,11 @@ def build_timeline(records):
     events.append({'kind': 'baseline', 'time': first['ingame_time'],
                    'snapshot': first['snapshot']})
     for previous, current in zip(records, records[1:]):
+        if time_key(current) < time_key(previous):
+            events.append(dict(kind='timeline_reset', time=current['ingame_time'],
+                               previous_time=previous['ingame_time'],
+                               snapshot=current['snapshot']))
+            continue
         a, b = previous['snapshot'], current['snapshot']
         changes = []
         if a['identity'].get('profession') != b['identity'].get('profession'):
@@ -75,7 +86,9 @@ def prepare_view(save, unit_id):
         _source_cache.clear()  # Retain only one save's parsed history.
         _source_cache.update(key=key, records=by_unit)
     records = _source_cache['records'].get(unit_id, [])
-    revision = hashlib.sha256(json.dumps(records, sort_keys=True).encode()).hexdigest()
+    revision = hashlib.sha256(json.dumps(
+        {'schema_version': VIEW_SCHEMA_VERSION, 'records': records},
+        sort_keys=True).encode()).hexdigest()
     events = build_timeline(records)
     return records, events, revision
 
@@ -94,19 +107,21 @@ def process_views(save):
             continue
         output = directory / f'{unit_id}.json'
         previous = load_results(output)
-        if previous.get('request') == request:
+        same_schema = previous.get('schema_version') == VIEW_SCHEMA_VERSION
+        if same_schema and previous.get('request') == request:
             if previous.get('state') in ('ready', 'empty'):
                 continue
             if previous.get('state') == 'failed' and (
                     previous.get('attempts', 0) >= 3 or time.time() < previous.get('retry_at', 0)):
                 continue
-        if previous.get('state') == 'ready' and time.time() - previous.get('updated_at', 0) < 30:
+        if same_schema and previous.get('state') == 'ready' and time.time() - previous.get('updated_at', 0) < 30:
             continue  # Coalesce rapid reopen requests without repeated model calls.
         records, events, revision = prepare_view(save, unit_id)
-        state = dict(request=request, revision=revision, record_count=len(records),
+        state = dict(schema_version=VIEW_SCHEMA_VERSION,
+                     request=request, revision=revision, record_count=len(records),
                      event_count=len(events), state='processing', updated_at=time.time(),
                      story=previous.get('story'), story_revision=previous.get('story_revision'))
-        state['attempts'] = previous.get('attempts', 0) if previous.get('request') == request else 0
+        state['attempts'] = previous.get('attempts', 0) if same_schema and previous.get('request') == request else 0
         # Pages stay bounded even for long histories. Publish before model work.
         for page, offset in enumerate(range(0, len(events), 20)):
             lines = []
@@ -114,6 +129,11 @@ def process_views(save):
                 when = event['time']
                 lines.append(f"[{index}] {event['kind']}: year {when['year']}, tick {when['year_tick']}")
                 lines.extend(event.get('changes', []))
+                if event['kind'] == 'timeline_reset':
+                    before = event['previous_time']
+                    lines.append('New timeline segment: recorded game time moved backward from '
+                                 f"year {before['year']}, tick {before['year_tick']}.")
+                    lines.append('Fresh baseline; changes across this boundary are not inferred.')
                 if event['kind'] == 'stress_trend':
                     lines.append(f"Stress: {event['from_stress']} to {event['to_stress']}")
             write_results(directory / f'{unit_id}.{revision}.{page}.json', {'lines': lines})
@@ -127,9 +147,14 @@ def process_views(save):
             write_results(output, state)
             continue
         write_results(output, state)
-        item = dict(id=f'history-v4:{unit_id}:{revision}', kind='dwarf_history',
-                    raw=json.dumps({'identity': records[-1]['snapshot']['identity'], 'events': events}),
-                    context='Write a concise factual history using only supplied events. Preserve Unicode names exactly.')
+        item = dict(id=f'history-v{VIEW_SCHEMA_VERSION}:{unit_id}:{revision}', kind='dwarf_history',
+                    raw=json.dumps({'schema_version': VIEW_SCHEMA_VERSION,
+                                    'identity': records[-1]['snapshot']['identity'], 'events': events}),
+                    context=('Write a concise factual history using only supplied events. Preserve Unicode names exactly. '
+                             'A timeline_reset starts a separate recorded segment with a fresh baseline. '
+                             'Time moved backward, possibly after loading an earlier save; the cause is unconfirmed. '
+                             'Do not infer thought removals, stress changes, or causal continuity across segments. '
+                             'Distinguish earlier recorded segments from the latest segment.'))
         try:
             if len(item['raw'].encode()) > 200000:
                 raise ValueError('History exceeds the current story size limit; timeline is available.')
