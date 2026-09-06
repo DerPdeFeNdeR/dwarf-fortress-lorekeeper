@@ -9,11 +9,11 @@ $ErrorActionPreference = 'Stop'
 
 function Convert-WindowsPathToWsl([string]$Path) {
     $normalizedPath = $Path -replace '\\', '/'
-    $convertedPath = (wsl.exe wslpath -a $normalizedPath).Trim()
-    if (-not $convertedPath) {
+    $convertedPath = wsl.exe --exec wslpath -a $normalizedPath
+    if ($LASTEXITCODE -ne 0 -or -not $convertedPath) {
         throw "Could not convert Windows path '$Path' through WSL."
     }
-    return $convertedPath
+    return $convertedPath.Trim()
 }
 
 $wslProjectPath = Convert-WindowsPathToWsl $ProjectPath
@@ -22,11 +22,15 @@ if (-not $wslProjectPath -or -not $wslSaveDirectory) {
     throw 'Could not convert the project or save path through WSL.'
 }
 
-$command = "bash '$wslProjectPath/helper/start_watcher.sh' '$wslSaveDirectory'"
+$shellQuoteEscape = [string][char]39 + [char]34 + [char]39 + [char]34 + [char]39
+$quotedProject = $wslProjectPath.Replace("'", $shellQuoteEscape)
+$quotedSave = $wslSaveDirectory.Replace("'", $shellQuoteEscape)
+$command = "bash '$quotedProject/helper/start_watcher.sh' '$quotedSave'"
 $action = New-ScheduledTaskAction -Execute 'wsl.exe' -Argument "-- bash -lc `"$command`""
 $trigger = New-ScheduledTaskTrigger -AtLogOn
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
 $description = 'Watches Dwarf Fortress save queues for Lorekeeper jobs.'
+$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 
 if ($WhatIf) {
     Write-Host 'PowerShell validation passed.'
@@ -39,7 +43,7 @@ if ($WhatIf) {
 }
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger `
-    -Principal $principal -Description $description -Force | Out-Null
+    -Principal $principal -Settings $settings -Description $description -Force | Out-Null
 
 Write-Host "Registered '$TaskName' to start the Lorekeeper watcher at logon."
 Write-Host "Project: $ProjectPath"

@@ -10,6 +10,8 @@ from typing import Callable
 
 from process_queue import process_queue
 from watch_queue import process_if_changed
+from history_view import process_views
+from worker_runtime import worker_runtime
 
 
 QUEUE_NAME = "lorekeeper-translation-queue.jsonl"
@@ -45,6 +47,12 @@ def watch_directory(
 ) -> None:
     states: dict[Path, tuple[int, int] | None] = {}
     while True:
+        for save in sorted(save_directory.iterdir()):
+            if save.is_dir():
+                try:
+                    process_views(save)
+                except Exception as error:
+                    print(f'Lorekeeper: history preparation failed: {type(error).__name__}: {error}', flush=True)
         count, states, errors = process_directory_once(save_directory, states, processor)
         if count:
             print(f"Lorekeeper: processed {count} translation job(s).", flush=True)
@@ -74,7 +82,8 @@ def main() -> None:
     print(f"Lorekeeper: watching save directory {args.save_directory} every {args.interval:g}s.",
           flush=True)
     try:
-        watch_directory(args.save_directory, args.interval)
+        with worker_runtime(args.save_directory):
+            watch_directory(args.save_directory, args.interval)
     except KeyboardInterrupt:
         print("Lorekeeper: save-directory watcher stopped.")
 

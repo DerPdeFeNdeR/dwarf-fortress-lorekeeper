@@ -6,6 +6,7 @@ local history = reqscript('lorekeeper/history')
 local policy = reqscript('lorekeeper/policy')
 local glossary = reqscript('lorekeeper/glossary')
 local translation = reqscript('lorekeeper/translation')
+local display_text = reqscript('lorekeeper/display_text')
 
 local passed = 0
 
@@ -16,6 +17,20 @@ local function assert_true(condition, description)
     passed = passed + 1
     print('PASS: ' .. description)
 end
+
+local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+assert_true(#paragraphs == 3 and paragraphs[1] == 'First paragraph.' and
+    paragraphs[2] == '' and paragraphs[3] == 'Later records.',
+    'preserves story paragraph breaks without question marks')
+local windows_lines = display_text.wrap('First\r\n\r\nSecond\rThird\tword')
+assert_true(table.concat(windows_lines, '\n') == 'First\n\nSecond\nThird word',
+    'normalizes story line endings and tabs before display conversion')
+local name_lines = display_text.wrap('Doren ònulokil\n\nMistêm Oslandakas')
+assert_true(name_lines[1] == dfhack.utf2df('Doren ònulokil') and
+    name_lines[3] == dfhack.utf2df('Mistêm Oslandakas'),
+    'preserves accented names across story paragraphs')
+assert_true(table.concat(display_text.wrap('one two three', 7), '\n') == 'one two\nthree',
+    'wraps story words within the display width')
 
 local function copy_snapshot(snapshot_data)
     local copy = {

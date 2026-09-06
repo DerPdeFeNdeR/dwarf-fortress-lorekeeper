@@ -40,9 +40,19 @@
   copying, and closing without replacing the vanilla screen.
 - The history view normalizes known CP437-mojibake dwarf names in cached story
   prose before rendering, while retaining the original cache text for audit.
-- The history view checks the latest timeline version and reports whether its
-  story is ready, pending in the queue, or not yet requested; it must not show
-  an older cached story as current.
+- Opening the history view requests preparation for the selected dwarf. R reads
+  prepared results without requesting new work; reopening requests newer history.
+  It reports processing/ready/failed status and labels preparation time and older
+  story revisions; it must not present a prepared view as live game state.
+- The reliability batch replaces the heavy queue payload with small
+  files under `lorekeeper-views`. Python prepares timeline pages and model input;
+  the window must never parse history logs or construct model payloads.
+  The user verified responsive opening/refresh, story completion, and N/P
+  timeline pagination on 2026-09-06. Older completed stories remain readable
+  with their preparation time and explicit revision labeling.
+- Split story paragraph breaks before UTF-8-to-DF conversion; preserve blank
+  lines and convert each display line once. The user verified the formatting
+  fix and all 30 DFHack tests on 2026-09-06.
 - History story requests use a versioned compact payload with exact thought
   additions/removals, profession transitions, and personality facet changes.
   Change the request/schema version when the payload contract changes so stale
@@ -131,7 +141,8 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
   `lorekeeper/show` after refresh. `show` currently presents a current-state
   summary, not a historical story.
 - DFHack UI text uses a CP437-oriented display path while Codex returns Unicode.
-  Translation cache display fields are therefore ASCII-safe/transliterated;
+  Translation caches preserve Unicode using JSON escapes, and the UI converts
+  Unicode once to DF display encoding. Do not transliterate names;
   the authoritative snapshot and the Identity section retain the original
   dwarf name and raw values.
 - Codex CLI may reuse ChatGPT-managed authentication for local workflows.

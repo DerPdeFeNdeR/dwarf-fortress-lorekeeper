@@ -49,3 +49,8 @@ The helper cache writer preserves Unicode by using JSON Unicode escapes. This
 keeps the cache ASCII-safe for DFHack while allowing names and model prose to
 round-trip with their original characters. The queue processor also repairs a
 known CP437-mojibake form of a dwarf name in newly generated story prose.
+The history window writes small per-dwarf requests under `lorekeeper-views`.
+The save-directory watcher prepares paginated timelines before generating a
+story from a fixed revision. R reads results; reopening requests current history.
+Older stories remain labeled while newer preparation completes. N/P change
+timeline pages. Model input construction never runs in the window callback.

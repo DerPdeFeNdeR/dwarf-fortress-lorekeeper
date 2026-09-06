@@ -11,5 +11,6 @@ function should_record(previous_signature, current_signature,
         return true
     end
 
-    return current_tick - last_recorded_tick >= minimum_interval_ticks
+    return current_tick < last_recorded_tick or
+        current_tick - last_recorded_tick >= minimum_interval_ticks
 end

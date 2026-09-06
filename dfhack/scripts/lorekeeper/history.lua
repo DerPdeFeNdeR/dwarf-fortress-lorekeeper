@@ -99,7 +99,11 @@ local function build_history_indexes(history_path, index_directory, on_record)
                 end
                 index_files[dwarf_id] = index
             end
-            index:write(line, '\n')
+            if not index:write(line, '\n') then
+                source:close()
+                for _, open_index in pairs(index_files) do open_index:close() end
+                return nil
+            end
         end
     end
 
@@ -178,7 +182,7 @@ local function get_latest_snapshot(path, dwarf_id)
     return latest_snapshot
 end
 
-function load_latest_signatures()
+function load_latest_signatures(yield_record)
     local path, path_error = get_history_path()
     if not path then
         return nil, path_error
@@ -194,6 +198,7 @@ function load_latest_signatures()
     if not marker then
         local built = build_history_indexes(path, index_directory, function(record)
             signatures[record.snapshot.identity.id] = signature(record.snapshot)
+            if yield_record then yield_record() end
         end)
         if not built then
             return nil, ('could not build history index: %s'):format(index_directory)
@@ -213,6 +218,7 @@ function load_latest_signatures()
                 record.snapshot and record.snapshot.identity then
             signatures[record.snapshot.identity.id] = signature(record.snapshot)
         end
+        if yield_record then yield_record() end
     end
 
     file:close()
@@ -605,7 +611,11 @@ function append_snapshots(snapshot_data_list, skip_file_deduplication)
 
         local index_file = index_files[record.snapshot.identity.id]
         if index_file then
-            index_file:write(encoded_or_error, '\n')
+            if not index_file:write(encoded_or_error, '\n') then
+                -- Master log is authoritative; force recovery of derived indexes.
+                os.remove(index_directory .. '/.complete')
+                print('The Lorekeeper: history index write failed; rebuild required.')
+            end
         end
     end
 

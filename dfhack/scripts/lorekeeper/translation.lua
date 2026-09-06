@@ -25,7 +25,8 @@ function repair_story_text(text, full_name)
         }
         local display_name = dfhack.utf2df(source_name)
         for _, candidate in ipairs(candidates) do
-            text = text:gsub(candidate, function() return display_name end)
+            local literal = candidate:gsub('(%W)', '%%%1')
+            text = text:gsub(literal, function() return display_name end)
         end
     end
     return text

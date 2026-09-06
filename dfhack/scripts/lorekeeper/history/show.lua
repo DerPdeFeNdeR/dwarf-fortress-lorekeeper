@@ -1,176 +1,85 @@
--- Display a selected dwarf's cached story and grouped history timeline.
---
--- Run: lorekeeper/history/show
-
+-- Display history prepared outside the game thread.
 local gui = require('gui')
 local widgets = require('gui.widgets')
-local snapshot = reqscript('lorekeeper/snapshot')
-local history = reqscript('lorekeeper/history')
-local translation = reqscript('lorekeeper/translation')
-
-local CONTENT_WIDTH = 72
-
-local function add_header(choices, text)
-    table.insert(choices, {text=text, pen=COLOR_LIGHTCYAN})
-end
-
-local function add_wrapped(choices, text)
-    local line = ''
-    for word in text:gmatch('%S+') do
-        if #line > 0 and #line + #word + 1 > CONTENT_WIDTH then
-            table.insert(choices, {text=line})
-            line = word
-        elseif #line == 0 then
-            line = word
-        else
-            line = line .. ' ' .. word
-        end
-    end
-    if #line > 0 then
-        table.insert(choices, {text=line})
-    end
-end
-
-local function add_event(choices, index, event)
-    if event.kind == 'baseline' then
-        local time = event.record.ingame_time
-        local data = event.record.snapshot
-        table.insert(choices, {text=('[%d] Baseline: year %d, tick %d; stress %s; thoughts %d'):format(
-            index, time.year, time.year_tick,
-            tostring(data.mental_state.stress or '<none>'), #data.thoughts)})
-    elseif event.kind == 'stress_trend' then
-        local start_time = event.start_record.ingame_time
-        local end_time = event.end_record.ingame_time
-        table.insert(choices, {text=('[%d] Stress trend: %d to %d across %d snapshot(s)'):format(
-            index, event.from_stress, event.to_stress, event.snapshot_count)})
-        table.insert(choices, {text=('    Year %d tick %d to year %d tick %d'):format(
-            start_time.year, start_time.year_tick,
-            end_time.year, end_time.year_tick)})
-    else
-        local time = event.record.ingame_time
-        table.insert(choices, {text=('[%d] Change: year %d, tick %d'):format(
-            index, time.year, time.year_tick)})
-        for _, change in ipairs(event.changes) do
-            table.insert(choices, {text='    - ' .. change})
-        end
-    end
-end
+local requests = reqscript('lorekeeper/view_request')
+local display_text = reqscript('lorekeeper/display_text')
 
 LorekeeperHistoryWindow = defclass(LorekeeperHistoryWindow, widgets.Window)
-LorekeeperHistoryWindow.ATTRS {
-    frame_title='The Lorekeeper: History',
-    frame={w=78, h=30},
-    resizable=true,
-    resize_min={w=48, h=12},
-}
+LorekeeperHistoryWindow.ATTRS {frame_title='The Lorekeeper: History',
+    frame={w=78,h=30}, resizable=true, resize_min={w=60,h=12}}
 
 function LorekeeperHistoryWindow:init()
+    self.page = 0
+    local unit = dfhack.gui.getSelectedUnit(true)
+    if unit then
+        self.unit_id = unit.id
+        self.name = dfhack.units.getReadableName(unit, true)
+        self.request_ok, self.request_error = requests.request(self.unit_id)
+    end
     self:addviews{
-        widgets.List{
-            view_id='content',
-            frame={t=0, l=0, r=0, b=2},
-            scroll_keys={},
-        },
-        widgets.HotkeyLabel{
-            frame={b=0, l=0},
-            key='CUSTOM_R',
-            label='Refresh ',
-            auto_width=true,
-            on_activate=self:callback('refresh'),
-        },
-        widgets.HotkeyLabel{
-            frame={b=0, l=18},
-            key='CUSTOM_CTRL_C',
-            label='Copy ',
-            auto_width=true,
-            on_activate=self:callback('copy_history'),
-        },
-        widgets.HotkeyLabel{
-            frame={b=0, l=32},
-            key='LEAVESCREEN',
-            label='Close ',
-            auto_width=true,
-            on_activate=function() self.parent_view:dismiss() end,
-        },
+        widgets.List{view_id='content',frame={t=0,l=0,r=0,b=2},scroll_keys={}},
+        widgets.HotkeyLabel{frame={b=0,l=0},key='CUSTOM_R',label='Refresh',
+            on_activate=self:callback('refresh')},
+        widgets.HotkeyLabel{frame={b=0,l=15},key='CUSTOM_N',label='Next',
+            on_activate=function() self.page=self.page+1; self:refresh() end},
+        widgets.HotkeyLabel{frame={b=0,l=28},key='CUSTOM_P',label='Previous',
+            on_activate=function() self.page=math.max(0,self.page-1); self:refresh() end},
+        widgets.HotkeyLabel{frame={b=1,l=0},key='CUSTOM_CTRL_C',label='Copy',
+            on_activate=self:callback('copy_history')},
+        widgets.HotkeyLabel{frame={b=1,l=20},key='LEAVESCREEN',label='Close',
+            on_activate=function() self.parent_view:dismiss() end},
     }
-
     self:refresh()
 end
 
 function LorekeeperHistoryWindow:refresh()
     local choices = {}
-    local selected = snapshot.capture_selected_unit()
-    if not selected then
-        table.insert(choices, {text='No unit is currently selected.', pen=COLOR_YELLOW})
-        self.subviews.content:setChoices(choices)
-        return
+    local function add(text)
+        for _, line in ipairs(display_text.wrap(text)) do
+            table.insert(choices, {text=line})
+        end
     end
-
-    table.insert(choices, {text=('Name: %s'):format(dfhack.utf2df(selected.identity.name)),
-        pen=COLOR_LIGHTCYAN})
-    local records, error_message = history.load_snapshots(selected.identity.id)
-    if not records then
-        table.insert(choices, {text='Could not load history: ' .. tostring(error_message),
-            pen=COLOR_YELLOW})
-        self.subviews.content:setChoices(choices)
-        return
-    end
-    if #records == 0 then
-        table.insert(choices, {text='No recorded history for this dwarf.', pen=COLOR_YELLOW})
-        self.subviews.content:setChoices(choices)
-        return
-    end
-
-    local story_status, story = translation.get_story_status(
-        selected.identity.id, records[#records].ingame_time)
-    add_header(choices, 'History story')
-    if story_status == 'ready' then
-        local story_text = translation.repair_story_text(
-            story.text, selected.identity.name)
-        add_wrapped(choices, story_text)
-        table.insert(choices, {text=('Confidence: %s'):format(story.confidence or '<unknown>')})
-    elseif story_status == 'pending' then
-        table.insert(choices, {text='Story pending; the background watcher is processing it.',
-            pen=COLOR_YELLOW})
-        table.insert(choices, {text='Press R to refresh when processing finishes.'})
+    if not self.unit_id then
+        add('No unit is selected.')
     else
-        table.insert(choices, {text='No story has been requested for the latest timeline.',
-            pen=COLOR_YELLOW})
-        table.insert(choices, {text='Run lorekeeper/story, then press R to refresh.'})
-    end
-
-    local events = history.build_events(records)
-    add_header(choices, ('Timeline: %d records, %d events'):format(#records, #events))
-    for index, event in ipairs(events) do
-        add_event(choices, index, event)
+        table.insert(choices,{text='Name: ' .. self.name})
+        local data = requests.read(self.unit_id)
+        if not requests.worker_available() then add('Background watcher unavailable. Prepared history remains readable.') end
+        if not self.request_ok then add('Request failed: ' .. tostring(self.request_error)) end
+        if not data then
+            add('History queued. Waiting for the background watcher; press R to check.')
+        else
+            add('Status: ' .. data.state)
+            if data.request and (data.request.year ~= df.global.cur_year or
+                    data.request.tick ~= df.global.cur_year_tick) then
+                add(('Prepared for year %d, tick %d; later records may not be included.'):format(
+                    data.request.year, data.request.tick))
+            end
+            if data.story then
+                if data.story_revision ~= data.revision then add('Previous story; newer history is being prepared.') end
+                add(data.story)
+            end
+            if data.error then add(data.error) end
+            self.page = math.min(self.page, math.max(0,(data.pages or 1)-1))
+            add(('Timeline: %d records, %d events. Page %d of %d.'):format(
+                data.record_count or 0,data.event_count or 0,self.page+1,math.max(1,data.pages or 0)))
+            local page = requests.read(self.unit_id,self.page,data.revision)
+            if page then for _,line in ipairs(page.lines) do add(line) end end
+        end
     end
     self.subviews.content:setChoices(choices)
 end
 
 function LorekeeperHistoryWindow:copy_history()
-    local lines = {}
-    for _, choice in ipairs(self.subviews.content:getChoices()) do
-        if type(choice.text) == 'string' then
-            table.insert(lines, choice.text)
-        end
-    end
-    dfhack.internal.setClipboardTextCp437Multiline(table.concat(lines, '\n'))
-    dfhack.gui.showAnnouncement('Lorekeeper history copied to clipboard.', COLOR_LIGHTGREEN)
+    local lines={}
+    for _,choice in ipairs(self.subviews.content:getChoices()) do table.insert(lines,choice.text) end
+    dfhack.internal.setClipboardTextCp437Multiline(table.concat(lines,'\n'))
 end
 
-LorekeeperHistoryScreen = defclass(LorekeeperHistoryScreen, gui.ZScreenModal)
-LorekeeperHistoryScreen.ATTRS {
-    focus_path='lorekeeper/history/show',
-}
-
+LorekeeperHistoryScreen=defclass(LorekeeperHistoryScreen,gui.ZScreenModal)
+LorekeeperHistoryScreen.ATTRS {focus_path='lorekeeper/history/show'}
 function LorekeeperHistoryScreen:init()
-    self:addviews{
-        LorekeeperHistoryWindow{view_id='window'},
-    }
+    self:addviews{LorekeeperHistoryWindow{view_id='window'}}
 end
-
-if view then
-    view:dismiss()
-end
-
-view = LorekeeperHistoryScreen{}:show()
+if view then view:dismiss() end
+view=LorekeeperHistoryScreen{}:show()

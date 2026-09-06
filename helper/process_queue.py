@@ -7,6 +7,8 @@ import argparse
 import json
 import os
 import tempfile
+import warnings
+import fcntl
 from pathlib import Path
 from typing import Any
 
@@ -17,20 +19,21 @@ def load_queue(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     raw_queue = path.read_bytes()
-    try:
-        queue_text = raw_queue.decode('utf-8')
-    except UnicodeDecodeError:
-        # DFHack may persist CP437 strings from Dwarf Fortress in JSON text.
-        queue_text = raw_queue.decode('cp437')
-
     items = []
-    for line_number, line in enumerate(queue_text.splitlines(), 1):
+    for line_number, raw_line in enumerate(raw_queue.splitlines(keepends=True), 1):
+        if not raw_line.endswith(b'\n'):
+            break  # The writer may still be appending this record.
+        try:
+            line = raw_line.decode('utf-8')
+        except UnicodeDecodeError:
+            line = raw_line.decode('cp437')
         if not line.strip():
             continue
         try:
             item = json.loads(line)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f'invalid queue JSON on line {line_number}') from exc
+        except json.JSONDecodeError:
+            warnings.warn(f'invalid queue JSON on line {line_number}', RuntimeWarning)
+            continue
         items.append(item)
     return items
 
@@ -82,20 +85,36 @@ def repair_story_names(items: list[dict[str, Any]], results: list[dict[str, Any]
 
 
 def process_queue(queue_path: Path, result_path: Path) -> int:
-    queued_items = normalize_items(load_queue(queue_path))
+    result_path.parent.mkdir(parents=True, exist_ok=True)
+    with result_path.with_suffix('.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return _process_queue(queue_path, result_path)
+
+
+def _process_queue(queue_path: Path, result_path: Path) -> int:
+    queued_items = load_queue(queue_path)
     cached_results = load_results(result_path)
     pending_items = [item for item in queued_items if item['id'] not in cached_results]
     if not pending_items:
-        if cached_results:
-            write_results(result_path, cached_results)
         return 0
 
-    batch = run_batch(pending_items)
-    repair_story_names(pending_items, batch['results'])
-    for result in batch['results']:
-        cached_results[result['id']] = result
-    write_results(result_path, cached_results)
-    return len(batch['results'])
+    count = 0
+    # Bound each invocation after removing completed jobs. Keep aliases so every
+    # request ID gets a result even when equivalent content shares one call.
+    for offset in range(0, len(pending_items), 50):
+        chunk = pending_items[offset:offset + 50]
+        batch = run_batch(normalize_items(chunk))
+        repair_story_names(chunk, batch['results'])
+        by_id = {result['id']: result for result in batch['results']}
+        representatives = normalize_items(chunk)
+        def key(item):
+            return (item['kind'], item['raw'], item.get('context', ''), item.get('language', 'en'))
+        by_content = {key(item): by_id[item['id']] for item in representatives}
+        for item in chunk:
+            cached_results[item['id']] = dict(by_content[key(item)], id=item['id'])
+            count += 1
+        write_results(result_path, cached_results)
+    return count
 
 
 def main() -> None:

@@ -6,6 +6,8 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import os
+import signal
 import tempfile
 from pathlib import Path
 from typing import Any, Callable
@@ -13,6 +15,19 @@ from typing import Any, Callable
 
 MAX_BATCH_SIZE = 50
 PROMPT_VERSION = "1"
+
+
+def run_process(command, *, input, timeout, encoding, **_options):
+    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, text=True, encoding=encoding,
+                          start_new_session=True) as process:
+        try:
+            stdout, stderr = process.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.communicate()
+            raise RuntimeError('Model generation exceeded its time limit.')
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
 
 
 def normalize_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -90,7 +105,7 @@ def run_batch(
     if not items:
         return {"schema_version": 1, "source": "codex-cli", "prompt_version": PROMPT_VERSION, "results": []}
 
-    runner = runner or subprocess.run
+    runner = runner or run_process
     schema_path = Path(__file__).with_name("codex_batch_schema.json")
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as output_file:
         output_path = Path(output_file.name)
@@ -114,6 +129,8 @@ def run_batch(
             text=True,
             capture_output=True,
             check=False,
+            timeout=180,
+            encoding='utf-8',
         )
         if completed.returncode != 0:
             detail = (completed.stderr or completed.stdout or "Codex exited unsuccessfully").strip()
