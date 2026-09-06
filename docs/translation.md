@@ -36,3 +36,7 @@ The finished product should run a background local watcher that notices queued
 jobs and updates the cache without requiring the player to leave Dwarf
 Fortress. The in-game UI should show pending, ready, and failure states while
 the helper remains outside DFHack for credentials and model execution.
+
+History story jobs use the `dwarf-history-v2` request namespace and include
+grouped events plus exact thought and personality changes. The cache key is
+versioned so changes to that payload contract force a fresh model result.

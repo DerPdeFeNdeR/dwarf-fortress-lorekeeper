@@ -186,9 +186,12 @@ assert_true(events[3].kind == 'change' and
     'preserves discrete history changes as events')
 
 local story_input = history.build_story_input(records)
-assert_true(story_input.schema_version == 1 and #story_input.events == 3 and
+assert_true(story_input.schema_version == 2 and #story_input.events == 3 and
         story_input.events[2].kind == 'stress_trend',
     'builds compact structured story input')
+assert_true(#story_input.events[3].thoughts_added == 1 and
+        story_input.events[3].thoughts_added[1].thought_name == 'Talked',
+    'includes exact thought additions in story input')
 
 local unknown_thought = glossary.describe_thought('FutureThoughtToken')
 assert_true(not unknown_thought.known and unknown_thought.source == 'unknown' and

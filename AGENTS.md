@@ -36,6 +36,10 @@
 - `lorekeeper/history/show` is the dedicated in-game history view. It displays
   the cached story above the grouped timeline and supports scrolling, refresh,
   copying, and closing without replacing the vanilla screen.
+- History story requests use a versioned compact payload with exact thought
+  additions/removals, profession transitions, and personality facet changes.
+  Change the request/schema version when the payload contract changes so stale
+  cached stories are not reused.
 
 ## Coding and review standard
 

@@ -52,7 +52,7 @@ if not ok then
 end
 
 local latest_time = records[#records].ingame_time
-local request_id = ('dwarf-history:%d:%d:%d'):format(
+local request_id = ('dwarf-history-v2:%d:%d:%d'):format(
     snapshot_data.identity.id, latest_time.year, latest_time.year_tick)
 local request_record = {
     id=request_id,

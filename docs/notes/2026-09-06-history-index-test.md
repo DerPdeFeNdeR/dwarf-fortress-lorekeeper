@@ -35,6 +35,13 @@ The dedicated history window was then verified for Mistêm:
 - The window rendered the accented dwarf name correctly and remained usable for
   scrolling through the timeline.
 
+The enriched history-story path was verified afterward:
+
+- `lorekeeper/test` reported 25 passing DFHack tests.
+- `lorekeeper/story` queued the versioned `dwarf-history-v2` request.
+- The Codex helper processed one fresh job and returned a high-confidence
+  story using the exact timeline inputs.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.

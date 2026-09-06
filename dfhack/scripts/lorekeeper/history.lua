@@ -313,6 +313,61 @@ local function is_stress_only(changes)
     return #changes == 1 and changes[1]:find('^stress changed') ~= nil
 end
 
+local function thought_key(thought)
+    return table.concat({tostring(thought.thought_id), tostring(thought.emotion_id)}, ':')
+end
+
+function describe_thought_changes(previous_snapshot, current_snapshot)
+    local previous_counts = {}
+    local current_counts = {}
+    local previous_examples = {}
+    local current_examples = {}
+    for _, thought in ipairs(previous_snapshot.thoughts) do
+        local key = thought_key(thought)
+        previous_counts[key] = (previous_counts[key] or 0) + 1
+        previous_examples[key] = thought
+    end
+    for _, thought in ipairs(current_snapshot.thoughts) do
+        local key = thought_key(thought)
+        current_counts[key] = (current_counts[key] or 0) + 1
+        current_examples[key] = thought
+    end
+
+    local added = {}
+    local removed = {}
+    for key, count in pairs(current_counts) do
+        for _ = 1, math.max(0, count - (previous_counts[key] or 0)) do
+            table.insert(added, current_examples[key])
+        end
+    end
+    for key, count in pairs(previous_counts) do
+        for _ = 1, math.max(0, count - (current_counts[key] or 0)) do
+            table.insert(removed, previous_examples[key])
+        end
+    end
+    return added, removed
+end
+
+function describe_personality_changes(previous_snapshot, current_snapshot)
+    local previous_values = {}
+    for _, facet in ipairs(previous_snapshot.personality_facets) do
+        previous_values[facet.facet_id] = facet.value
+    end
+
+    local changes = {}
+    for _, facet in ipairs(current_snapshot.personality_facets) do
+        local previous_value = previous_values[facet.facet_id]
+        if previous_value ~= nil and previous_value ~= facet.value then
+            table.insert(changes, {
+                facet=facet.facet_name,
+                from_value=previous_value,
+                to_value=facet.value,
+            })
+        end
+    end
+    return changes
+end
+
 function build_events(records)
     local events = {}
     if #records == 0 then
@@ -360,6 +415,7 @@ function build_events(records)
             flush_stress_event()
             table.insert(events, {
                 kind='change',
+                previous_record=records[index - 1],
                 record=current_record,
                 changes=changes,
             })
@@ -382,10 +438,19 @@ local function summarize_snapshot(snapshot_data)
         })
     end
 
+    local personality_facets = {}
+    for _, facet in ipairs(snapshot_data.personality_facets) do
+        table.insert(personality_facets, {
+            facet=facet.facet_name,
+            value=facet.value,
+        })
+    end
+
     return {
         profession=snapshot_data.identity.profession,
         stress=snapshot_data.mental_state.stress,
         thoughts=thoughts,
+        personality_facets=personality_facets,
     }
 end
 
@@ -396,7 +461,7 @@ function build_story_input(records)
 
     local first_snapshot = records[1].snapshot
     local story_input = {
-        schema_version=1,
+        schema_version=2,
         identity=first_snapshot.identity,
         events={},
     }
@@ -418,11 +483,21 @@ function build_story_input(records)
                 snapshot_count=event.snapshot_count,
             })
         else
+            local previous_snapshot = event.previous_record.snapshot
+            local current_snapshot = event.record.snapshot
+            local added_thoughts, removed_thoughts = describe_thought_changes(
+                previous_snapshot, current_snapshot)
             table.insert(story_input.events, {
                 kind=event.kind,
                 time=event.record.ingame_time,
                 changes=event.changes,
-                snapshot=summarize_snapshot(event.record.snapshot),
+                profession_from=previous_snapshot.identity.profession,
+                profession_to=current_snapshot.identity.profession,
+                thoughts_added=added_thoughts,
+                thoughts_removed=removed_thoughts,
+                personality_changes=describe_personality_changes(
+                    previous_snapshot, current_snapshot),
+                snapshot=summarize_snapshot(current_snapshot),
             })
         end
     end
