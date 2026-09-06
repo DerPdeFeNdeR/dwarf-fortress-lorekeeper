@@ -40,3 +40,7 @@ the helper remains outside DFHack for credentials and model execution.
 History story jobs use the `dwarf-history-v2` request namespace and include
 grouped events plus exact thought and personality changes. The cache key is
 versioned so changes to that payload contract force a fresh model result.
+
+The helper cache writer preserves Unicode by using JSON Unicode escapes. This
+keeps the cache ASCII-safe for DFHack while allowing names and model prose to
+round-trip with their original characters.

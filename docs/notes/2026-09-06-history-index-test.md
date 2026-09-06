@@ -61,6 +61,11 @@ Fortress save directory with `--once`; it discovered the save queues and
 completed with zero pending jobs. Its unit test confirms that multiple region
 queues are processed independently and that unchanged queues are not rerun.
 
+Unicode cache handling was verified with the active save. The helper now writes
+escaped Unicode rather than transliterating model text, and the in-game history
+window displays `Mistêm Oslandakas` correctly after the watcher processes a
+fresh story job.
+
 The collector prewarm path was also verified:
 
 - `lorekeeper/collect start` started for 68 citizens.
@@ -89,4 +94,4 @@ The collector prewarm path was also verified:
 TMPDIR=/dev/shm python3 -m unittest discover -s helper -p 'test_*.py'
 ```
 
-Result: 12 tests passed. `git diff --check` also passed.
+Result: 15 tests passed. `git diff --check` also passed.

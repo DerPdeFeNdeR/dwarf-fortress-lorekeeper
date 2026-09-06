@@ -22,6 +22,9 @@
   local watcher that notices queued jobs, invokes the authenticated model
   client outside DFHack, writes the cache, and lets the in-game UI show pending
   or ready status.
+- Translation caches must preserve Unicode names and prose. Write JSON with
+  Unicode escapes when necessary to remain ASCII-safe for DFHack; never
+  transliterate user-visible dwarf names as a workaround.
 - History currently uses the append-only `lorekeeper-history.jsonl` file plus a
   fortress-wide sidecar index under `lorekeeper-history-index/`. The first
   history lookup builds that index in one pass; later dwarf lookups use the

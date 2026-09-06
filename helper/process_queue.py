@@ -7,32 +7,10 @@ import argparse
 import json
 import os
 import tempfile
-import unicodedata
 from pathlib import Path
 from typing import Any
 
 from codex_batch import normalize_items, run_batch
-
-
-def display_safe_text(value: Any) -> Any:
-    if not isinstance(value, str):
-        return value
-    normalized = unicodedata.normalize('NFKD', value)
-    return normalized.encode('ascii', errors='ignore').decode('ascii')
-
-
-def display_safe_results(results: dict[str, Any]) -> dict[str, Any]:
-    safe_results = {}
-    for result_id, result in results.items():
-        if not isinstance(result, dict):
-            safe_results[result_id] = result
-            continue
-        safe_result = dict(result)
-        for field in ('text', 'explanation', 'category'):
-            if field in safe_result:
-                safe_result[field] = display_safe_text(safe_result[field])
-        safe_results[result_id] = safe_result
-    return safe_results
 
 
 def load_queue(path: Path) -> list[dict[str, Any]]:
@@ -73,7 +51,9 @@ def load_results(path: Path) -> dict[str, Any]:
 
 def write_results(path: Path, results: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded_results = (json.dumps(display_safe_results(results), ensure_ascii=True, indent=2,
+    # JSON unicode escapes keep the file ASCII-safe for DFHack while preserving
+    # the original characters when its JSON decoder reads the cache.
+    encoded_results = (json.dumps(results, ensure_ascii=True, indent=2,
                                   sort_keys=True) + '\n').encode('cp437', errors='replace')
     with tempfile.NamedTemporaryFile(mode='wb', dir=path.parent, delete=False) as output:
         output.write(encoded_results)

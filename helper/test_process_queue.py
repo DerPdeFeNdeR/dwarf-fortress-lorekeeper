@@ -66,8 +66,9 @@ class QueueTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'results.json'
             write_results(path, {'a': {'text': 'Eral èrithbomrek'}})
-            self.assertEqual(load_results(path)['a']['text'], 'Eral erithbomrek')
+            self.assertEqual(load_results(path)['a']['text'], 'Eral èrithbomrek')
             self.assertNotIn(b'\xc3\xa8', path.read_bytes())
+            self.assertIn(b'\\u00e8', path.read_bytes())
 
 
 if __name__ == '__main__':
