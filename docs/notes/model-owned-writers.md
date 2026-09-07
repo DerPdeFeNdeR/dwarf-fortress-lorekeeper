@@ -41,7 +41,9 @@ Evaluate a captured item with `helper/evaluate_writing.py --profile PROFILE
 model using its own policy. Reports retain private evidence/prose; never commit
 them. This evaluator does not publish into game saves. Coverage success does not
 prove every narrative claim. Native Windows Luna execution requires an installed,
-authenticated Codex CLI; this machine currently has the CLI only in WSL.
+authenticated Windows Codex CLI; this development machine currently has the CLI
+only in WSL. Windows and WSL Codex installations keep separate PATHs and login
+state.
 
 Both Linux and Windows suites: 211 tests, 204 passed, seven optional live tests
 skipped. Tests cover cross-model rejection, separate prompts/envelopes, tuning,

@@ -5,6 +5,8 @@ documentation describes the published model-owned writer architecture, audited
 2026-09-07. Older notes retain their original checkpoint claims explicitly.
 
 - [Windows developer setup and troubleshooting](../README.md#windows-developer-installation)
+- [Windows player setup](setup-windows.md)
+- [Linux player setup](setup-linux.md)
 - [DFHack commands and controls](../dfhack/README.md)
 - [Worker configuration and tests (native Windows or optional WSL)](../helper/README.md)
 - [Data contracts](schema.md)

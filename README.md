@@ -60,6 +60,9 @@ reader says the worker is unavailable, confirm Ollama is running and that the
 PowerShell window reports `writer ollama / qwen3:8b`. The optional Codex/Luna
 setup below is for developers; it is not required for the Qwen playtest.
 
+Standalone guides: [Windows player setup](docs/setup-windows.md) and
+[Linux player setup](docs/setup-linux.md).
+
 ## How it works
 
 | Component | Runs where | Responsibility |
@@ -153,15 +156,36 @@ schema-constrained JSON, disables Qwen thinking for latency, and keeps the model
 loaded between requests. See [worker configuration](helper/README.md#configuration)
 for provider settings and the optional hosted fallback.
 
-### Optional: use the Codex provider instead
+### Optional: use the Codex/Luna provider instead
 
-Use the **same WSL user** that will run the watcher. Follow the [official Codex CLI installation instructions](https://learn.chatgpt.com/docs/codex/cli). The documented Linux installer is:
+The native Windows watcher can use a Windows Codex CLI installation. Follow the
+[official Codex CLI installation instructions](https://learn.chatgpt.com/docs/codex/cli),
+then authenticate that same Windows installation. In PowerShell, verify it:
+
+```powershell
+codex --version
+codex login
+codex login status
+```
+
+Select Luna for the current worker process:
+
+```powershell
+$env:LOREKEEPER_WRITER_PROFILE = 'luna-literary'
+$env:LOREKEEPER_PROVIDER = 'codex-cli'
+$env:LOREKEEPER_MODEL = 'gpt-5.6-luna'
+$env:LOREKEEPER_REASONING_EFFORT = 'low'
+.\helper\start_watcher.ps1 -Python python
+```
+
+WSL remains an optional alternative, useful when the Linux Codex CLI is already
+installed there. Use the **same WSL user** that will run the watcher. The documented Linux installer is:
 
 ```bash
 curl -fsSL https://chatgpt.com/codex/install.sh | sh
 ```
 
-This downloads and executes an installer; inspect it first if required by your development policy. Follow its PATH instructions and reopen WSL if necessary. From the repository root in **WSL**:
+This downloads and executes an installer; inspect it first if required by your development policy. Follow its PATH instructions and reopen WSL if necessary. From the repository root in **WSL**, verify login and model access:
 
 ```bash
 command -v codex
@@ -170,7 +194,7 @@ codex login
 codex login status
 ```
 
-Complete the ChatGPT browser login. If its callback fails, `codex login --device-auth` is an alternative where your account permits device login. Windows-only Codex login, GitHub login, and SSH keys do not authenticate this WSL worker.
+Complete the ChatGPT browser login. If its callback fails, `codex login --device-auth` is an alternative where your account permits device login. Windows and WSL Codex installations have separate PATHs and authentication state.
 
 Check model access with one small **real model request** in WSL:
 

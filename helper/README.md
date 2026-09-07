@@ -2,8 +2,9 @@
 
 For Windows installation, use the [root README](../README.md#windows-developer-installation).
 Commands below are labeled **PowerShell** or **WSL**. The active player setup uses
-the native Windows worker, Windows Python, and local Ollama by default. WSL remains
-supported for the optional Codex/Luna path. Native Windows uses byte-range file
+the native Windows worker, Windows Python, and local Ollama by default. Windows
+Codex/Luna is also supported when the Windows CLI is installed; WSL remains an
+optional alternative. Native Windows uses byte-range file
 locks; WSL uses POSIX locks. Do not run both workers on the same save root:
 cross-platform lock interoperability is not assumed.
 
