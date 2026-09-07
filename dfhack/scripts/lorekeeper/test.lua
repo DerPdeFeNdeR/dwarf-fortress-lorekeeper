@@ -26,6 +26,9 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+assert_true(reader_text.status({state='ready',biography_update={mode='defer'}},nil,true,nil)==
+    'No significant new developments. Saved biography unchanged.',
+    'reader explains deferred routine developments without claiming a new story')
 local annual_state={year=101,time=101*403200+400000}
 local closed=chronicle.advance(annual_state,102,10)
 assert_true(#closed==1 and closed[1]==101,'annual rollover closes exactly the completed year')

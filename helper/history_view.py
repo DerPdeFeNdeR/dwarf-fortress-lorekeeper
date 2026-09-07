@@ -10,9 +10,10 @@ from process_queue import load_queue, load_results, write_results, repair_story_
 from historian import HISTORIAN_CONTEXT, STORY_NOTICE, restore_reference_names
 from story_input import build_story_input, story_key, stable_json
 from story_coverage import CoverageError, validate as validate_coverage
+from biography_updates import APPEND_CONTEXT, load_memory, plan, checkpoint, make_memory
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 16
+VIEW_SCHEMA_VERSION = 17
 
 
 def load_profile(directory, request):
@@ -155,6 +156,11 @@ def process_views(save):
         payload = build_story_input(records[-1]['snapshot']['identity'] if records else {}, events, profile)
         settings = generation_settings()
         semantic_key = story_key(payload, [VIEW_SCHEMA_VERSION, settings, HISTORIAN_CONTEXT])
+        memory_path = directory / f'{unit_id}.biography-memory.json'
+        memory = load_memory(memory_path, previous.get('story')) if same_schema else None
+        if memory and memory.get('generation') != settings:
+            memory = None
+        update = plan(memory, previous, payload, records, request)
         state = dict(schema_version=VIEW_SCHEMA_VERSION,
                      request=request, revision=revision, record_count=len(records),
                      event_count=len(events), state='processing', updated_at=time.time(),
@@ -162,6 +168,7 @@ def process_views(save):
                      story_explanation=previous.get('story_explanation'),
                      story_notice=previous.get('story_notice'),
                      story_key=previous.get('story_key'),
+                     biography_update=dict(mode=update['mode'], reason=update['reason']),
                      generation=settings, story_generation=previous.get('story_generation'),
                      timings={'queue_seconds': max(0, started_at - request.get('nonce', started_at)),
                               'generation_seconds': 0, 'cache_hit': False})
@@ -189,7 +196,18 @@ def process_views(save):
             state['state'] = 'empty'
             write_results(output, state)
             continue
-        if same_schema and previous.get('story_key') == semantic_key and previous.get('story'):
+        if update['mode'] == 'defer':
+            # Keep the story's evidence checkpoint intact so minor developments
+            # accumulate across visits. The prepared timeline is still current.
+            state['state'] = 'ready'
+            state['timings']['cache_hit'] = True
+            state['timings']['total_seconds'] = time.time() - request.get('nonce', started_at)
+            write_results(output, state)
+            continue
+        if update['reason'] in ('incompatible_history', 'timeline_reset', 'revised_timeline_or_reset'):
+            state['story_key'] = None
+        if same_schema and previous.get('story_key') == semantic_key and previous.get('story') and update['reason'] not in (
+                'incompatible_history', 'timeline_reset', 'revised_timeline_or_reset'):
             try:
                 state['story_coverage'] = validate_coverage(previous['story'], payload['required_event_coverage'])
             except CoverageError:
@@ -198,21 +216,26 @@ def process_views(save):
             state['state'] = 'ready'
             state['story_revision'] = revision
             state['timings']['cache_hit'] = True
+            state['biography_update'] = dict(mode='reuse', reason='unchanged_evidence')
+            if memory:
+                write_results(memory_path, dict(memory, checkpoint=checkpoint(records, request)))
             state['timings']['total_seconds'] = time.time() - request.get('nonce', started_at)
             write_results(output, state)
             continue
         write_results(output, state)
         item = dict(id=f'history-v{VIEW_SCHEMA_VERSION}:{unit_id}:{revision}', kind='dwarf_history',
-                    raw=stable_json(dict(payload, schema_version=VIEW_SCHEMA_VERSION)),
-                    context=HISTORIAN_CONTEXT)
+                    raw=stable_json(dict(update['payload'], schema_version=VIEW_SCHEMA_VERSION)),
+                    context=HISTORIAN_CONTEXT + (APPEND_CONTEXT if update['mode']=='append' else ''))
         state['timings']['payload_bytes'] = len(item['raw'].encode('utf-8'))
-        jobs.append((request_path, output, state, item, profile, semantic_key))
+        jobs.append((request_path, output, state, item, profile, semantic_key,
+                     payload, checkpoint(records, request), memory))
     # Publish every discovered timeline before waiting for any model call.
     for job in jobs:
         complete_story(*job)
 
 
-def complete_story(request_path, output, state, item, profile, semantic_key):
+def complete_story(request_path, output, state, item, profile, semantic_key,
+                   payload, records_checkpoint, memory):
     generation_start = time.perf_counter()
     request = state['request']
     state['timings']['model_queue_seconds'] = max(0, time.time() - state['updated_at'])
@@ -222,10 +245,23 @@ def complete_story(request_path, output, state, item, profile, semantic_key):
         result = run_batch([item], settings=state['generation'])['results'][0]
         repair_story_names([item], [result])
         result['text'] = restore_reference_names(result['text'], profile)
-        if len(result['text'].encode('utf-8')) > 8000:
+        text = result['text'].strip()
+        if not text:
+            raise ValueError('Generated biography is empty.')
+        validate_coverage(text, json.loads(item['raw']).get('required_event_coverage', []))
+        if state['biography_update']['mode'] == 'append':
+            if len(text.encode('utf-8')) > 2000:
+                raise ValueError('Biography continuation exceeds the size limit.')
+            if any(p.strip() in state['story'] for p in text.split('\n\n') if p.strip()):
+                raise ValueError('Biography continuation repeats an existing paragraph.')
+            text = state['story'] + '\n\n' + text
+        if len(text.encode('utf-8')) > 8000:
             raise ValueError('Generated story exceeds the display size limit.')
-        coverage = validate_coverage(result['text'], json.loads(item['raw']).get('required_event_coverage', []))
-        state.update(state='ready', story=result['text'], story_revision=state['revision'],
+        coverage = validate_coverage(text, payload.get('required_event_coverage', []))
+        next_memory = make_memory(payload, records_checkpoint, text,
+                                  state['biography_update']['mode'], memory, state['generation'])
+        write_results(output.with_name(f"{request['unit_id']}.biography-memory.json"), next_memory)
+        state.update(state='ready', story=text, story_revision=state['revision'],
                      story_explanation=result.get('explanation', ''),
                      story_notice=STORY_NOTICE, story_key=semantic_key,
                      story_generation=state['generation'], story_coverage=coverage)

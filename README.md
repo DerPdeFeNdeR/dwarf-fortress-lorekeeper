@@ -10,6 +10,16 @@ Alternatively run `lorekeeper/read` in the DFHack launcher. The reader shows the
 without the technical timeline and updates automatically, even while paused.
 You may close it and keep playing while the historian writes.
 
+Biographies remember their saved prose. Unchanged evidence reuses it without a
+model call; significant compatible new events can add a short continuation with the earlier
+story supplied for narrative context. Corrected references, changed stable
+character context, time reversals, and length limits instead require a fresh
+version. Existing prose remains readable while an update is pending or fails.
+See [incremental biography behavior](docs/notes/incremental-biographies.md).
+Routine developments accumulate instead of producing a paragraph on every visit.
+When none qualify, the reader says **No significant new developments** and leaves
+the saved biography unchanged.
+
 - **U:** update the biography (existing prose stays visible while waiting).
 - **D:** switch between story and technical details; **N/P:** page the details.
 - **Arrow keys, Page Up/Down, or mouse wheel:** scroll.

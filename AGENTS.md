@@ -86,6 +86,22 @@
   Keep a previous biography visible, or immediately show a small explicitly
   factual overview when none exists. The player may close the window and play
   while generation continues outside DFHack.
+  Schema-17 biographies use a Python-only `.biography-memory.json` sidecar for
+  conservative incremental continuation. Unchanged evidence reuses prose; compatible
+  new events append with prior prose explicitly labeled interpretation and separate
+  verified context. Reference corrections, old-event discovery, time reversal,
+  stable-context changes, or length limits rebuild instead. Never advance the
+  checkpoint after a failed update or feed invented motives back as verified facts.
+  The significance filter defers routine changes without a model call or advancing
+  the written-evidence checkpoint. Minor additions accumulate (8 occurrences,
+  3 types, 3 observation times); consequential events bypass that threshold.
+  Reference corrections and branch changes still require safe revision. Treat
+  thresholds as editorial tuning, not game/medical classifications. See the note
+  below for personality/stress thresholds and exact suppression rules.
+  See `docs/notes/incremental-biographies.md`; automated and live model testing
+  passed. On 2026-09-06 the user explicitly approved commit/push before extended
+  in-game verification and will play to collect feedback. Treat this as a playtest
+  checkpoint, not completed player acceptance; review feedback before new features.
   It reports processing/ready/failed status and labels preparation time and older
   story revisions; it must not present a prepared view as live game state.
 - The reliability batch replaces the heavy queue payload with small
@@ -99,7 +115,7 @@
   collector. Capture is capped per section (64 entries, 128 emotions), with a
   128 KiB file limit; unsupported/truncated data must be reported. R does not
   recapture; reopening does. Compact semantic profile content participates in
-  schema-v16 story caching, excluding capture/recall time and emotional strength.
+  schema-v17 story caching, excluding capture/recall time and emotional strength.
   Full profiles remain separate from the compact model input. The user verified initial profile
   capture and all 33 then-current Lua tests; see biography audit notes.
 - Resolve Death/UnexpectedDeath references as historical figures only; do not
@@ -112,7 +128,7 @@
   not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
   error, and budget-exhausted status. Cache only within one capture so mutable
   names and save/world changes cannot reuse stale objects. Limit 160 references
-  and link depth 2. Profile schema 5 / story schema 16 use typed references
+  and link depth 2. Profile schema 5 / story schema 17 use typed references
   and unique full-name accent restoration; never guess among ambiguous matches.
 - On-demand profiles include directional friends from `hf.info.relationships.hf_visual`
   using documented `core.love` thresholds (50 friend, 75 close friend, 100 kindred
