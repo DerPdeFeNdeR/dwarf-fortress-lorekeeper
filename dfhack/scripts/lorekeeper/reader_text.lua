@@ -2,6 +2,16 @@
 --@module = true
 local display = reqscript('lorekeeper/display_text')
 
+function selected_chapter(chapters, key)
+    key = key or 'intro'
+    for i,row in ipairs(chapters or {}) do
+        if row.key == key then return row,i end
+    end
+    -- Do not jump away from the introduction as background results arrive.
+    if key == 'intro' then return nil end
+    return chapters and chapters[1],1
+end
+
 function pending(data, requested)
     if not requested then return false end
     local prepared = data and data.request
@@ -14,6 +24,9 @@ function status(data, requested, available, request_error)
     if request_error then return 'Could not request an update. See Details.' end
     if not available then return 'Historian offline. Saved biographies are still readable.' end
     if pending(data, requested) then
+        if data and data.monthly_version then
+            return 'Writing monthly chapters in the background. Saved chapters remain readable.'
+        end
         return data and data.story and 'Updating biography. The previous version is shown below.' or
             'The historian is preparing this biography...'
     end
@@ -22,6 +35,9 @@ function status(data, requested, available, request_error)
         return 'No significant new developments. Saved biography unchanged.'
     end
     if data and data.state == 'empty' then return 'No recorded history yet.' end
+    if data and data.monthly_version then
+        return 'N/P: browse months and introduction. Update checks for important developments.'
+    end
     if data and data.historical_event_coverage and data.historical_event_coverage.status=='building' then
         return 'Older events were still indexing. Choose Update to include newly indexed events.'
     end

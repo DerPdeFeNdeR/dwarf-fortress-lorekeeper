@@ -36,8 +36,11 @@ def facets(payload):
 
 
 def assess(old, current, additions, episodes):
+    known_subjects = set(old.get('known_story_subjects', [])) | {row['subject_key'] for row in old.get('heard_stories', [])}
+    if len(known_subjects)<256 and any(row['subject_key'] not in known_subjects for row in current.get('heard_stories', [])):
+        return 'new_story_subject'
     old_anchors = {r['sentence'] for r in old.get('required_event_coverage', [])}
-    if any(r['sentence'] not in old_anchors for r in current.get('required_event_coverage', [])):
+    if any(r['sentence'] not in old_anchors for r in current.get('required_event_coverage', []) if r.get('kind')!='heard_story'):
         return 'consequential_event'
     if any(row.get('kind') not in ROUTINE_EVENT_KINDS for row in episodes):
         return 'historical_milestone'

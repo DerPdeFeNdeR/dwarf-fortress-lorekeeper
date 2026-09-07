@@ -14,6 +14,7 @@ local biography_overlay = reqscript('lorekeeper/overlay')
 local friends = reqscript('lorekeeper/friends')
 local event_index = reqscript('lorekeeper/event_index')
 local chronicle = reqscript('lorekeeper/chronicle')
+local storytelling = reqscript('lorekeeper/storytelling')
 
 local passed = 0
 
@@ -26,6 +27,55 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local culture=reqscript('lorekeeper/culture_index')
+local cultural_index=culture.new(745,0)
+local telling={id=1,site=745,event_year=102,event_time=10,type=df.incident_type.Performance,
+    data={Performance={performance_event=df.performance_event_type.STORYTELLING_EVENT}}}
+culture.add(cultural_index,telling,102); culture.add(cultural_index,telling,102)
+assert_true(#cultural_index.years[102]==1,'chronicle deduplicates storytelling incidents')
+telling.id=2; telling.site=999; culture.add(cultural_index,telling,102)
+telling.site=745; telling.data.Performance.performance_event=df.performance_event_type.POETRY_RECITAL
+culture.add(cultural_index,telling,102)
+assert_true(#cultural_index.years[102]==1,'culture index excludes other sites and non-story performances')
+telling.data.Performance.performance_event=df.performance_event_type.STORYTELLING_EVENT
+for i=2,270 do telling.id=i; culture.add(cultural_index,telling,102) end
+local cultural_selected,cultural_truncated=culture.select(cultural_index,102)
+assert_true(#cultural_index.years[102]==256 and #cultural_selected==4 and cultural_truncated,
+    'culture index bounds retention and annual selection')
+local chapter_list={{key='intro'},{key='000102-03'},{key='000101-11'}}
+assert_true(reader_text.selected_chapter(chapter_list).key=='intro',
+    'biography opens on introduction by default')
+assert_true(reader_text.selected_chapter(chapter_list,'000102-03').key=='000102-03',
+    'background refresh preserves explicitly selected month')
+assert_true(reader_text.selected_chapter({{key='000102-03'}},'intro')==nil,
+    'pending introduction does not jump to a monthly chapter')
+local chapter_requests = reqscript('lorekeeper/view_request')
+assert_true(chapter_requests.read_chapter(1,'../another.json') == nil and
+    chapter_requests.read_chapter(1,'2.monthly.abc.json') == nil,
+    'monthly reader rejects traversal and another dwarf chapter')
+assert_true(reader_text.status({monthly_version=1,state='ready'},nil,true):find('browse months',1,true) ~= nil,
+    'monthly reader explains chapter navigation')
+local calls=0
+local function story_resolver(kind,id)
+    calls=calls+1
+    return {key=kind..':'..id,status='resolved',details={name='Test narrator'}}
+end
+local performance={type=df.incident_type.Performance,event_year=102,event_time=10,site=1,
+    data={Performance={performance_event=df.performance_event_type.POETRY_RECITAL,reference_id=41,
+        written_content_id=-1,participants={}}}}
+storytelling.performance(performance,story_resolver)
+assert_true(calls==0,'poetry reference IDs are never resolved as historical story events')
+performance.data.Performance.performance_event=df.performance_event_type.STORYTELLING_EVENT
+local story=storytelling.performance(performance,story_resolver)
+assert_true(story.subject_reference=='story_subject:41' and story.year==102 and calls==1,
+    'storytelling resolves the historical subject while preserving performance time')
+performance.data.Performance.written_content_id=8
+story=storytelling.performance(performance,story_resolver)
+assert_true(story.subject_status=='unsupported_reference' and calls==1,
+    'unsupported written story references do not guess a historical event')
+local office=storytelling.position_definition({positions={own={{id=7,name={[0]='copper voice'},flags={ELECTED=true}}}}},7)
+assert_true(office.name=='copper voice' and office.definition_observed_now,
+    'story office resolves by definition ID without inferring a historical location')
 assert_true(reader_text.status({state='ready',biography_update={mode='defer'}},nil,true,nil)==
     'No significant new developments. Saved biography unchanged.',
     'reader explains deferred routine developments without claiming a new story')

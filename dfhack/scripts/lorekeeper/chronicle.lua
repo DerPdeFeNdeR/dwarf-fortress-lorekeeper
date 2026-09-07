@@ -3,6 +3,7 @@
 local json=require('json')
 local index=reqscript('lorekeeper/event_index')
 local references=reqscript('lorekeeper/references')
+local culture=reqscript('lorekeeper/culture_index')
 
 runtime=runtime or nil
 timer=timer or nil
@@ -42,6 +43,7 @@ end
 function stop()
     if timer then dfhack.timeout_active(timer,nil) end
     timer=nil; runtime=nil
+    culture.stop()
 end
 
 local function write_request(payload,name)
@@ -81,11 +83,12 @@ local function export_request(job)
     local site=resolver:resolve('site',runtime.site_id)
     local bucket=state.site_years[job.year] or {}
     local selected=index.select_events(bucket,16)
+    local performances,culture_truncated=culture.select(culture.state,job.year)
     local payload={schema_version=1,site_id=runtime.site_id,
         site_name=site.details and site.details.name or 'Unnamed fortress',
         save_id=df.global.world.cur_savegame.save_dir,branch=runtime.branch,
         year=job.year,kind=job.kind,captured_year=df.global.cur_year,
-        captured_tick=df.global.cur_year_tick,events={},
+        captured_tick=df.global.cur_year_tick,events={},cultural_events={},
         source={df_version=dfhack.getDFVersion(),dfhack_version=dfhack.getDFHackVersion()},
         coverage={supported_types_only=true,index_errors=state.errors,
             retained_events=#bucket,selected_events=#selected,
@@ -93,10 +96,16 @@ local function export_request(job)
             started_year=runtime.started_year,started_tick=runtime.started_tick,
             midyear_start=job.year==runtime.started_year and runtime.started_tick>0,
             unavailable_year=job.year<df.global.cur_year-1,
-            separate_load_branch=true,skipped_years=runtime.skipped_years or 0}}
+            separate_load_branch=true,skipped_years=runtime.skipped_years or 0,
+            culture_scanned=culture.state.scanned,culture_errors=culture.state.errors,
+            culture_selected=#performances,culture_truncated=culture_truncated}}
     for _,event in ipairs(selected) do
         table.insert(payload.events,index.enrich(event,resolver))
         coroutine.yield() -- At most one event's bounded name resolution per frame.
+    end
+    for _,event in ipairs(performances) do
+        table.insert(payload.cultural_events,culture.enrich(event,resolver))
+        coroutine.yield()
     end
     runtime.sequence=runtime.sequence+1
     payload.nonce=tostring(os.time())..'-'..runtime.sequence
@@ -114,8 +123,9 @@ local function pump()
     runtime.skipped_years=(runtime.skipped_years or 0)+(skipped or 0)
     for _,year in ipairs(closed) do table.insert(runtime.pending,{year=year,kind='final'}) end
     index.start()
+    local culture_ready=culture.scan()
     if not runtime.capture and #runtime.pending>0 and index.state and
-        index.state.scanned==#df.global.world.history.events then
+        index.state.scanned==#df.global.world.history.events and culture_ready then
         local job=runtime.pending[1]
         runtime.capture=coroutine.create(function() export_request(job) end)
     end
@@ -131,7 +141,7 @@ local function pump()
             table.remove(runtime.pending,1); runtime.capture=nil; last_error=nil
         end
     end
-    timer=dfhack.timeout(runtime.capture and 1 or 100,'frames',pump)
+    timer=dfhack.timeout((runtime.capture or not culture_ready) and 1 or 100,'frames',pump)
 end
 
 function start()

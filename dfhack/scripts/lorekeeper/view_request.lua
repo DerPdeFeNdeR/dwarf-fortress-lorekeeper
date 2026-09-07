@@ -26,6 +26,19 @@ function read(unit_id, page, revision)
     if ok then return value end
 end
 
+function read_chapter(unit_id, filename)
+    if type(filename) ~= 'string' or not filename:match('^' .. unit_id .. '%.monthly%.[a-f0-9]+%.json$') then
+        return nil
+    end
+    local file = io.open(directory() .. '/' .. filename, 'r')
+    if not file then return nil end
+    local contents = file:read(65537)
+    file:close()
+    if not contents or #contents > 65536 then return nil end
+    local ok, value = pcall(json.decode, contents)
+    if ok then return value end
+end
+
 function request(unit_id)
     local path = directory()
     if not dfhack.filesystem.mkdir_recursive(path) and not dfhack.filesystem.isdir(path) then
@@ -33,7 +46,7 @@ function request(unit_id)
     end
     local nonce = os.time()
     local request_data = {unit_id=unit_id, year=df.global.cur_year,
-        tick=df.global.cur_year_tick, nonce=nonce}
+        tick=df.global.cur_year_tick, nonce=nonce, monthly_version=1}
     local target = ('%s/%d.%d.%d.%d.request.json'):format(path, unit_id,
         df.global.cur_year, df.global.cur_year_tick, nonce)
     local existing = io.open(target, 'r')

@@ -9,6 +9,7 @@ end
 local thought_types = {
     Death='historical_figure', UnexpectedDeath='historical_figure',
     WitnessDeath='incident', SawDeadBody='incident',
+    WatchPerform='performance_incident',
 }
 
 function thought_kind(name)
@@ -55,6 +56,28 @@ end
 
 function game_providers()
     local providers = {}
+    local stories=0
+    providers.performance_incident=function(id,_,resolve)
+        local object=df.incident.find(id)
+        if not object or field(df.incident_type,object.type)~='Performance' then return end
+        local data=field(field(object,'data'),'Performance')
+        if data and field(df.performance_event_type,data.performance_event)=='STORYTELLING_EVENT' then
+            if stories>=8 then return {subject_status='truncated'} end
+            stories=stories+1
+        end
+        return reqscript('lorekeeper/storytelling').performance(object,resolve)
+    end
+    providers.story_subject=function(id,_,resolve)
+        return reqscript('lorekeeper/storytelling').subject(df.history_event.find(id),resolve)
+    end
+    providers.story_office=function(entity_id,position_id)
+        local entity=df.historical_entity.find(entity_id)
+        if entity then return reqscript('lorekeeper/storytelling').position_definition(entity,position_id) end
+    end
+    providers.story_figure=function(id)
+        local figure=df.historical_figure.find(id)
+        if figure then return {name=utf(dfhack.translation.translateName(figure.name,true))} end
+    end
     providers.historical_figure = function(id)
         local object = df.historical_figure.find(id)
         if object then return {name=utf(dfhack.translation.translateName(object.name)),
@@ -96,7 +119,15 @@ function game_providers()
         local material = dfhack.matinfo.decode(mat_type, mat_index)
         if material then return {name=utf(material:toString()), token=material:getToken()} end
     end
-    for kind, type_name in pairs({site='world_site', entity='historical_entity',
+    providers.entity = function(id)
+        local object = df.historical_entity.find(id)
+        if not object then return end
+        local race = object.race>=0 and field(df.global.world.raws.creatures.all,object.race)
+        return {name=utf(dfhack.translation.translateName(object.name,true)),
+            entity_type=field(df.historical_entity_type,object.type),
+            race=race and utf(race.name[0]), classification_observed_now=true}
+    end
+    for kind, type_name in pairs({site='world_site',
             poetic_form='poetic_form', musical_form='musical_form', dance_form='dance_form'}) do
         providers[kind] = function(id)
             local object = df[type_name].find(id)

@@ -13,7 +13,7 @@ from story_coverage import CoverageError, validate as validate_coverage
 from biography_updates import APPEND_CONTEXT, load_memory, plan, checkpoint, make_memory
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 17
+VIEW_SCHEMA_VERSION = 21
 
 
 def load_profile(directory, request):
@@ -174,6 +174,9 @@ def process_views(save):
                               'generation_seconds': 0, 'cache_hit': False})
         state['attempts'] = previous.get('attempts', 0) if same_schema and previous.get('request') == request else 0
         state['historical_event_coverage'] = (profile or {}).get('historical_events', {}).get('coverage', {})
+        if request.get('monthly_version') == 1:
+            state['chapters'] = previous.get('chapters', [])
+            state['monthly_version'] = 1
         # Pages stay bounded even for long histories. Publish before model work.
         for page, offset in enumerate(range(0, len(events), 20)):
             lines = []
@@ -195,6 +198,10 @@ def process_views(save):
         if not records:
             state['state'] = 'empty'
             write_results(output, state)
+            continue
+        if request.get('monthly_version') == 1:
+            write_results(output, state)
+            jobs.append(('monthly', output, state, payload, records, profile))
             continue
         if update['mode'] == 'defer':
             # Keep the story's evidence checkpoint intact so minor developments
@@ -231,7 +238,23 @@ def process_views(save):
                      payload, checkpoint(records, request), memory))
     # Publish every discovered timeline before waiting for any model call.
     for job in jobs:
-        complete_story(*job)
+        if job[0] == 'monthly':
+            complete_monthly(*job[1:])
+        else:
+            complete_story(*job)
+
+
+def complete_monthly(output, state, payload, records, profile):
+    from monthly_biography import process
+    try:
+        process(output.parent, state, payload, records, profile, run_batch)
+    except Exception as error:
+        # Explicit retry only; keep published chapters and their checkpoints.
+        state.update(state='failed', error=str(error)[-500:], attempts=3,
+                     retry_at=time.time()+300)
+    state['updated_at'] = time.time()
+    state['timings']['total_seconds'] = state['updated_at'] - state['request'].get('nonce', state['updated_at'])
+    write_results(output, state)
 
 
 def complete_story(request_path, output, state, item, profile, semantic_key,
@@ -258,8 +281,10 @@ def complete_story(request_path, output, state, item, profile, semantic_key,
         if len(text.encode('utf-8')) > 8000:
             raise ValueError('Generated story exceeds the display size limit.')
         coverage = validate_coverage(text, payload.get('required_event_coverage', []))
+        compatible_memory = None if state['biography_update']['reason'] in (
+            'incompatible_history', 'timeline_reset', 'revised_timeline_or_reset') else memory
         next_memory = make_memory(payload, records_checkpoint, text,
-                                  state['biography_update']['mode'], memory, state['generation'])
+                                  state['biography_update']['mode'], compatible_memory, state['generation'])
         write_results(output.with_name(f"{request['unit_id']}.biography-memory.json"), next_memory)
         state.update(state='ready', story=text, story_revision=state['revision'],
                      story_explanation=result.get('explanation', ''),

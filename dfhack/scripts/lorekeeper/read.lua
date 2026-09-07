@@ -13,6 +13,7 @@ function BiographyWindow:init()
     local unit = dfhack.gui.getSelectedUnit(true)
     self.unit_id = unit and unit.id
     self.page = 0
+    self.chapter_key = 'intro'
     self:addviews{
         widgets.Label{frame={t=0,l=1,r=1}, text=unit and dfhack.units.getReadableName(unit,true) or
             'Select a dwarf, then open Lorekeeper.', text_pen=COLOR_YELLOW},
@@ -29,14 +30,28 @@ function BiographyWindow:init()
             on_activate=function() self.details=not self.details; self:refresh(true,true) end},
         widgets.HotkeyLabel{frame={b=1,r=1},key='LEAVESCREEN',label='Close',
             on_activate=function() self.parent_view:dismiss() end},
-        widgets.HotkeyLabel{frame={b=0,l=1},key='CUSTOM_P',label='Previous page',
-            visible=function() return self.details end,
-            on_activate=function() self.page=math.max(0,self.page-1); self:refresh(true,true) end},
-        widgets.HotkeyLabel{frame={b=0,l=25},key='CUSTOM_N',label='Next page',
-            visible=function() return self.details end,
-            on_activate=function() self.page=self.page+1; self:refresh(true,true) end},
+        widgets.HotkeyLabel{frame={b=0,l=1},key='CUSTOM_P',label='Previous',
+            on_activate=function() self:turn_page(-1) end},
+        widgets.HotkeyLabel{frame={b=0,l=25},key='CUSTOM_N',label='Next',
+            on_activate=function() self:turn_page(1) end},
+        widgets.HotkeyLabel{frame={b=0,r=1},key='CUSTOM_I',label='Introduction',
+            visible=function() return not self.details end,
+            on_activate=function() self.chapter_key='intro'; self:refresh(true,true) end},
     }
     self:update_biography()
+end
+
+function BiographyWindow:turn_page(delta)
+    if self.details then
+        self.page=math.max(0,self.page+delta)
+    else
+        local chapters=self.data and self.data.chapters or {}
+        local index=self.chapter_key=='intro' and 0 or 1
+        for i,row in ipairs(chapters) do if row.key==self.chapter_key then index=i end end
+        index=math.max(1,math.min(#chapters,index+delta))
+        self.chapter_key=chapters[index] and chapters[index].key
+    end
+    self:refresh(true,true)
 end
 
 function BiographyWindow:update_biography()
@@ -72,6 +87,18 @@ function BiographyWindow:refresh(force, reset_scroll)
     local status = self.unit_id and text.status(data,self.requested,self.available,self.request_error) or 'No dwarf selected.'
     self.subviews.status:setText(table.concat(display.wrap(status,self.width or 68),'\n'))
     local lines = text.lines(data,self.width or 68)
+    if not self.details and data and data.chapters and #data.chapters>0 then
+        local selected,index=text.selected_chapter(data.chapters,self.chapter_key)
+        if selected then
+            self.chapter_key=selected.key
+            local chapter=requests.read_chapter(self.unit_id,selected.file)
+            lines=display.wrap(selected.title .. (' (%d/%d)\n\n'):format(index,#data.chapters) ..
+                (chapter and chapter.text or 'This saved chapter could not be read.'),self.width or 68)
+        else
+            lines=display.wrap('Introduction and recollections\n\nThe introduction is not ready yet. '..
+                'Saved monthly chapters can still be browsed.',self.width or 68)
+        end
+    end
     if self.details then
         lines = {}
         local function add(value)
@@ -81,6 +108,7 @@ function BiographyWindow:refresh(force, reset_scroll)
         if self.request_error then add(self.request_error) end
         if data then
             add('Status: ' .. tostring(data.state))
+            if data.chapters_truncated then add('Showing the newest 99 monthly chapters; older files remain on disk.') end
             if data.error then add(data.error) end
             local coverage=data.historical_event_coverage
             if coverage and coverage.status then

@@ -46,7 +46,7 @@ end
 
 function capture(unit)
     local resolver = references.new(references.game_providers())
-    local result = {schema_version=5, unit_id=unit.id,
+    local result = {schema_version=7, unit_id=unit.id,
         histfig_id=unit.hist_figure_id, captured_at={year=df.global.cur_year,
         tick=df.global.cur_year_tick}, source={df_version=dfhack.getDFVersion(),
         dfhack_version=dfhack.getDFHackVersion()}, limitations={}, figures={},
@@ -146,6 +146,7 @@ function capture(unit)
     end
     table.insert(result.limitations, 'Only resolved typed references may supply names; unsupported types remain unresolved.')
     table.insert(result.limitations, 'Reference lookups are capped at 160 per profile with depth 2; no world scans.')
+    table.insert(result.limitations, 'Storytelling enrichment is capped at 8 incidents and 4 performers per incident; office definition lookup visits at most 128 entries. Historical election sites are not inferred from current assignments.')
     table.insert(result.limitations, 'Memory year/tick can indicate last use, not the original event date.')
     table.insert(result.limitations, 'Relationship links describe the current state, not necessarily the state at an event.')
     return result

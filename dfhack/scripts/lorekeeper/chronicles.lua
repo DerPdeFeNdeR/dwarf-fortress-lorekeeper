@@ -67,7 +67,8 @@ function ChroniclesWindow:refresh(force)
             data.kind=='draft' and 'Draft' or 'Annual chapter',self.page,#self.chapters)
         status=data.state=='ready' and 'Saved chapter. Coverage: supported retained events only.' or 'Historian: '..data.state
         if data.error then status=status..' — '..data.error end
-        if data.coverage and (data.coverage.midyear_start or data.coverage.truncated or data.coverage.unavailable_year) then
+        if data.coverage and (data.coverage.midyear_start or data.coverage.truncated or
+            data.coverage.culture_truncated or (data.coverage.culture_errors or 0)>0 or data.coverage.unavailable_year) then
             status=status..' Incomplete coverage.'
         end
         if chronicle.runtime and data.branch~=chronicle.runtime.branch then status=status..' Earlier recording branch.' end

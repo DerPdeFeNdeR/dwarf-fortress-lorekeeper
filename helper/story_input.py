@@ -7,6 +7,7 @@ from historian import narrative_events
 from life_events import collect as collect_life_events
 from historical_episodes import collect as collect_historical_episodes
 from story_coverage import requirements
+from heard_stories import collect as collect_heard_stories, anchor as story_anchor
 
 
 def stable_json(value):
@@ -84,9 +85,11 @@ def build_story_input(identity, events, profile):
                 row[key] = thoughts(event[key])
         compact.append(row)
     episodes=collect_historical_episodes(profile)
+    heard=collect_heard_stories(profile)
     return dict(identity=identity, events=compact, biography_profile=compact_profile(profile),
                 life_events=collect_life_events(profile),
-                historical_episodes=episodes, required_event_coverage=requirements(episodes),
+                historical_episodes=episodes, heard_stories=heard,
+                required_event_coverage=requirements(episodes) + story_anchor(identity, heard),
                 stress_bands=list(dict.fromkeys(stress)), final_stress_band=stress[-1] if stress else None,
                 numerical_note='Stress/focus bands are floor(value/1000), not diagnosed mental-state categories.')
 

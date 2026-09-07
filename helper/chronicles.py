@@ -9,6 +9,7 @@ from historical_episodes import SUPPORTED
 from historian import STORY_NOTICE
 from process_queue import load_results, write_results
 from story_coverage import requirements, validate as validate_coverage
+from cultural_events import collect as collect_culture, requirements as cultural_requirements
 
 CHRONICLE_CONTEXT = """Write an annual fortress chronicle, not one dwarf's biography.
 Use one learned, observant fortress historian, proud of craftsmanship and dryly
@@ -31,6 +32,18 @@ words. Avoid repeating factual anchors elsewhere. Leave technical coverage,
 recording branches, and draft labels outside the narrative; the UI supplies them.
 Drafts describe only the year so far; final chapters cover only the specified
 completed year. This narrator is fictional, not a claimed eyewitness.
+Cultural events are local storytelling performances. Name resolved storytellers
+and the historical subject; their topic's date is NOT the date of this telling.
+The named organization did not visit merely because someone told a story about it.
+Briefly explain supplied entity_details (race and organization type), recognizing
+classification_observed_now as current context, not proof of its historical form.
+Never invent an unknown storyteller, audience, quotation, allegiance, or visit.
+Before returning, verify that EVERY required_event_coverage sentence appears
+unchanged in text, including every incident: cultural anchor. Do not combine,
+shorten, rephrase, or omit one of those sentences even when several tellings
+concern appointments. Keep the anchors as separate sentences within a coherent
+cultural paragraph. Reduce optional visitor lists or commentary before dropping
+a required sentence. Entity explanations may follow, not alter, the anchors.
 """
 
 
@@ -55,6 +68,9 @@ def load_request(path):
         raise ValueError('Draft must describe the current year')
     if not isinstance(data.get('events'),list) or len(data['events'])>16:
         raise ValueError('Invalid chronicle event count')
+    culture=data.get('cultural_events',[])
+    if not isinstance(culture,list) or len(culture)>4 or any(not isinstance(e,dict) for e in culture):
+        raise ValueError('Invalid chronicle cultural event count')
     for event in data['events']:
         if not isinstance(event,dict) or any(type(event.get(k)) is not int for k in ('id','year','tick')):
             raise ValueError('Invalid chronicle event')
@@ -88,7 +104,9 @@ def chapter_input(request):
     anchors=[]
     for event in events:
         anchors.extend(requirements({'events':[event]}))
-    return dict(site_name=request['site_name'],site_id=request['site_id'],
+    culture=collect_culture(request)
+    anchors.extend(cultural_requirements(culture))
+    return dict(site_name=request['site_name'],site_id=request['site_id'],cultural_events=culture,
                 year=request['year'],kind=request['kind'],events=events,
                 required_event_coverage=anchors)
 
@@ -130,7 +148,7 @@ def process_chronicles(save):
         write_results(output,state); publish_catalog(directory)
         started=time.perf_counter()
         try:
-            if payload['events']:
+            if payload['events'] or payload['cultural_events']:
                 settings=generation_settings()
                 item=dict(id=key,kind='fortress_year',raw=json.dumps(payload,ensure_ascii=False),
                           context=CHRONICLE_CONTEXT)
@@ -143,6 +161,7 @@ def process_chronicles(save):
                 state.update(story='',empty=True)
             state['state']='ready'
             state['event_ids']=[event['id'] for event in payload['events']]
+            state['cultural_event_ids']=[event['source_key'] for event in payload['cultural_events']]
         except Exception as error:
             state.update(state='failed',error=str(error)[-500:])
         state.update(updated_at=time.time(),generation_seconds=time.perf_counter()-started)

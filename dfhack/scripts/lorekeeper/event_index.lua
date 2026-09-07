@@ -256,6 +256,7 @@ function enrich(source,resolver,hfid)
     if source.entity_id then
         local entity=resolver:resolve('entity',source.entity_id)
         row.entity_name=entity.details and entity.details.name
+        row.entity_details=entity.details
     end
     if source.item_id then
         local item=resolver:resolve('item',source.item_id)

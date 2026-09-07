@@ -1,76 +1,92 @@
-# The Lorekeeper - agent handoff
+# Playtest handoff — 2026-09-06
 
-## Current project location
+## Start here next session
 
-- Windows path: C:\Users\contr\projects\dwarf-fortress-lorekeeper
-- WSL path: /mnt/c/Users/contr/projects/dwarf-fortress-lorekeeper
-- Do not rename this directory again during this session. The workspace sandbox was originally rooted at dwarf-translator, and WSL tools show a stale/inaccessible mount after the rename. A new agent session should be opened with the new directory as its workspace root.
+The user approved the monthly-biography and cultural-chronicle batch and requested
+commit/push before playing normally. Start with their playtest feedback; do not
+begin another feature or regenerate dormant biographies automatically. Read
+`AGENTS.md`, check `git status` and the latest commit before editing. This handoff
+accompanies **Add monthly biographies and cultural chronicles**.
 
-## User goals
+## Current behavior
 
-- Build an in-world historian/storyteller for Steam Dwarf Fortress.
-- Use DFHack.
-- Let the player select a dwarf and open a dedicated Lorekeeper summary window.
-- Summarize thoughts, personality, stress, relationships, and eventually fortress history.
-- Preserve the vanilla UI; do not replace vanilla thought text for the initial version.
-- Use OpenAI gpt-5-mini to generate a grounded story from the dwarf's full state, rather than deterministic sentence-by-sentence translation.
+- Read biography (`lorekeeper/read` or the unit-sheet button): introduction first,
+  then significant recorded months newest-first. Each month is one paragraph;
+  quiet months are omitted. N/P browse, I returns to introduction, U requests new
+  evidence, D shows the technical timeline, Escape closes.
+- Monthly updates revise a chapter; reopening alone does not append paragraphs.
+  Saved chapters remain readable during background writing. Immutable revisions
+  and written-evidence checkpoints preserve successful work.
+- Heard stories include resolved subject, teller, organizations, listening date,
+  and reaction. They are not transcripts or evidence the listener participated
+  in their historical subject. Topic dates differ from performance dates.
+- Organizations have current type/race context. The Oracular League is a human
+  site government; The Letter of Safety is a dwarven civilization, not a document.
+  Neither visited merely because a local storyteller discussed it.
+- `lorekeeper/chronicles`: D requests Year so far. Finished annual chapters are
+  written after observed rollover and remain immutable. Cultural performances
+  now join historical events as a separate, deduplicated input.
 
-## Verified environment
+## Architecture and limits
 
-- DF version: v0.53.16 win64 STEAM
-- DFHack version: 53.16-r1.1
-- DFHack install: C:\Program Files (x86)\Steam\steamapps\common\DFHack
-- DFHack config: C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\script-paths.txt
-- Configured script path:
-  +C:/Users/contr/projects/dwarf-fortress-lorekeeper/dfhack/scripts
+Profile schema 7, biography view schema 21, monthly protocol/book version 1.
+Python: `monthly_biography`, `heard_stories`, `cultural_events`. Lua: `storytelling`,
+`culture_index`, shared typed `references`.
 
-## Working commands
+Profiles remain on-demand, not part of citizen polling. The reader only reads
+bounded prepared files; no model calls or history scans in the game loop.
+One monthly chapter per dwarf per watcher pass. Model remains gpt-5.6-luna / low.
+Previous prose is interpretation, never factual evidence. Missing required event
+coverage fails visibly; no automatic coverage retry loop.
 
-Open DFHack's in-game launcher with the backtick key, then run:
+Partial coverage: profiles 160 references / 128 KiB; historical profile episodes 8;
+annual historical selection 16; cultural index 128 incidents / 2 ms target per
+batch, 256 retained per site/year, latest 4 selected tellings per annual request.
+Current/previous year only. Monthly catalog shows introduction plus newest 99
+months; older files remain on disk. Monthly manifest write guard is 1.9 MB.
 
-- lorekeeper/dump - read-only selected-unit dump
-- lorekeeper/show - first summary window
-- lorekeeper/tokens - runtime token catalog
-- lorekeeper/tokens copy - copy token catalog to the system clipboard
+## Verification and remaining checks
 
-The dump was successfully tested on selected dwarf Mistem Woundcolored (unit 6137). It reports identity, thoughts/emotions, severities, stress, and personality facets. The summary window and clipboard copy were also implemented; footer spacing was fixed.
+- Python: 115 passed, two opt-in integrations skipped in the ordinary suite.
+- Actual DFHack: 88 passed.
+- Real monthly integration: introduction 9.54 s, month 11.60 s; cached reopening
+  made zero calls. In-game introduction-first selection and N/P navigation passed.
+- Cultural scan: 656/656 incidents, zero errors; enriched Brow profile 94,535 bytes.
+- First cultural draft omitted a required telling and correctly preserved old
+  prose. After a prompt correction, one explicit retry passed in 17.35 s with all
+  four named tellers. Actual Chronicle reader loaded the ready result.
+- The user said the result looks good, confirmed biography content inclusion,
+  and approved publication. Extended playtesting is now the next step.
+- Still unverified: natural year-end rollover; long-lived monthly growth and
+  capacity limits under real workloads. Narrative can still sound technical;
+  anchor checks do not prove every prose claim.
 
-## Important DFHack 53.16 field findings
+## Environment and diagnostics
 
-- Selected unit: dfhack.gui.getSelectedUnit(true)
-- Soul/personality: unit.status.current_soul.personality
-- Thoughts/emotions: personality.emotions
-- Thought type: thought.thought
-- Emotion type: thought.type
-- Severity: thought.severity
-- Strength: thought.relative_strength
-- Personality facets: personality.traits
-- World syndromes: df.global.world.raws.mat_table.syndromes.all
-- personality.traits uses string keys; thought/emotion records use numeric enum IDs.
-- Syndrome vectors contain blank reserved slots; skip empty syn_name values.
-- Raw severity can be negative or very large, so it is not a simple happiness scale.
-- Thought None and emotion ANYTHING are sentinel values.
-- subthought IDs need context-specific interpretation, especially for Syndrome.
+Shared WSL/Windows repository:
+`C:\Users\contr\projects\dwarf-fortress-lorekeeper`.
+Latest tested save: Steam Dwarf Fortress `save/region3`, Quickfortress, site 745.
+Latest tested subject: unit 8420, Brow. Recheck current selection/game time after
+the user has played rather than assuming they are unchanged.
 
-## Code and documentation
+Existing Windows task `Lorekeeper Queue Watcher` was last verified Running.
+Do not register another task or launch a duplicate worker. It runs
+`helper/watch_save_directory.py`; credentials remain outside the repository.
+DFHack autostart is already configured; `lorekeeper/collect status` checks the
+collector. Paused game time stops citizen scans, not background model generation.
+No game restart is needed for this commit. Rerun changed scripts first; restart
+only if modules stay cached or script paths change. Never alter game time for tests.
 
-- AGENTS.md - goals, Clean Code standard, architecture assumptions, project memory rules.
-- PLAN.md - phased roadmap.
-- dfhack/scripts/lorekeeper/dump.lua - selected-unit/raw data inspector.
-- dfhack/scripts/lorekeeper/show.lua - read-only summary window, refresh/copy/close.
-- dfhack/scripts/lorekeeper/tokens.lua - runtime token catalog.
-- docs/decisions - ADRs.
-- docs/notes - environment and test notes.
+Tests from repository root:
 
-## Immediate next implementation
+```sh
+PYTHONDONTWRITEBYTECODE=1 TMPDIR=/dev/shm python3 -m unittest discover -s helper -p 'test_*.py'
+```
 
-1. Build a structured snapshot function shared by dump.lua and show.lua.
-2. Add a temporary story placeholder section in show.lua.
-3. Add a local helper service later; keep API keys out of DFHack Lua.
-4. Send the full structured snapshot plus a compact token reference to gpt-5-mini.
-5. Cache responses by snapshot hash, model, prompt version, and schema version.
-6. Never block the DF render loop; show loading/error/fallback states.
+In-game: `lorekeeper/test`. Diagnose wrong names/dates/missing events using the
+selected request/profile and saved monthly or annual result. Do not commit private
+save dumps, generated books, credentials, or worker logs.
 
-## Git status
-
-The project has not yet been initialized into a usable Git repository. No remote is configured, no author identity is configured, and the stored GitHub CLI token is invalid. Before committing, ask the user for the desired Git author name/email and remote repository URL, or have them authenticate with gh auth login.
+Details: [monthly biographies](docs/notes/monthly-biographies.md),
+[heard stories](docs/notes/heard-stories.md),
+[cultural chronicles](docs/notes/cultural-chronicles.md).

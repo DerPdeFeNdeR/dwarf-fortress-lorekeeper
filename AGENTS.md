@@ -1,5 +1,12 @@
 # The Lorekeeper project context
 
+## Current handoff
+
+- Read `HANDOFF.md` when starting the next session. On 2026-09-06 the user approved
+  monthly biographies and named cultural chronicles, requested commit/push, and
+  will play to collect feedback. Review that feedback before starting new features.
+  Natural annual rollover and extended monthly growth remain unverified in play.
+
 ## User baseline
 
 - The target game is the Steam version of Dwarf Fortress.
@@ -24,7 +31,11 @@
   before adding a selected-dwarf-screen entry button. Do not expose ticks, raw
   traits, or event counts by default in the player-facing reader.
   U explicitly requests updated preparation; D toggles technical details without
-  requesting work, and N/P page those details. Escape closes the reader. Opening
+  requesting work, and N/P page those details. In story mode N/P browse monthly
+  chapters: introduction first, then current/latest recorded month and older
+  months newest-first (year/month headings). Every opening starts on introduction;
+  background refresh preserves an explicitly selected month. I returns to introduction.
+  Escape closes the reader. Opening
   captures the selected dwarf once; automatic polling does not recapture. The
   player must close/select another dwarf/reopen to switch subjects for now.
   The user approved the reader in-game on 2026-09-06; see
@@ -86,12 +97,28 @@
   Keep a previous biography visible, or immediately show a small explicitly
   factual overview when none exists. The player may close the window and play
   while generation continues outside DFHack.
-  Schema-17 biographies use a Python-only `.biography-memory.json` sidecar for
+  Legacy schema-18 biographies use a Python-only `.biography-memory.json` sidecar for
   conservative incremental continuation. Unchanged evidence reuses prose; compatible
   new events append with prior prose explicitly labeled interpretation and separate
   verified context. Reference corrections, old-event discovery, time reversal,
   stable-context changes, or length limits rebuild instead. Never advance the
   checkpoint after a failed update or feed invented motives back as verified facts.
+  New reader requests use schema 21 / monthly protocol 1: a short introduction
+  and recollections plus significant monthly chapters. Reopening checks evidence
+  on demand; it does not write a passage merely because another month passed.
+  Each month is exactly one narrative paragraph; the introduction may have 1-3.
+  Prompt for a single coherent passage and normalize monthly whitespace before
+  coverage validation/publication, preserving Unicode and facts. Prepare introduction
+  before months. Update the existing month's passage rather than append another portrait.
+  Preserve completed months except important newly discovered evidence, corrections,
+  or an explicitly requested writer-version update. Date heard stories by listening
+  time, never their historical subject's date. Unknown dates/baseline memories go
+  in recollections; snapshot timestamps date observations, not original events.
+  Python keeps a per-dwarf monthly manifest and immutable chapter revision files.
+  Time reversal/incompatible history archives the old manifest without merging
+  branches. One chapter per watcher pass; no model calls or log scans in the reader.
+  The catalog exposes the newest 99 monthly chapters plus introduction, retaining
+  older files on disk. See `docs/notes/monthly-biographies.md` for limits and tests.
   The significance filter defers routine changes without a model call or advancing
   the written-evidence checkpoint. Minor additions accumulate (8 occurrences,
   3 types, 3 observation times); consequential events bypass that threshold.
@@ -115,7 +142,7 @@
   collector. Capture is capped per section (64 entries, 128 emotions), with a
   128 KiB file limit; unsupported/truncated data must be reported. R does not
   recapture; reopening does. Compact semantic profile content participates in
-  schema-v17 story caching, excluding capture/recall time and emotional strength.
+  schema-v21 story caching, excluding capture/recall time and emotional strength.
   Full profiles remain separate from the compact model input. The user verified initial profile
   capture and all 33 then-current Lua tests; see biography audit notes.
 - Resolve Death/UnexpectedDeath references as historical figures only; do not
@@ -128,8 +155,25 @@
   not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
   error, and budget-exhausted status. Cache only within one capture so mutable
   names and save/world changes cannot reuse stale objects. Limit 160 references
-  and link depth 2. Profile schema 5 / story schema 17 use typed references
+  and link depth 2. Profile schema 7 / story schema 21 use typed references
   and unique full-name accent restoration; never guess among ambiguous matches.
+- WatchPerform references are performance incidents, not historical events directly.
+  Only Performance / STORYTELLING_EVENT with a valid reference_id and no written
+  content reference resolves a story subject. Poem/music/dance IDs must never be
+  treated as historical events. `storytelling.lua` enriches at most 8 incidents
+  on demand, within the shared 160-reference budget; no periodic enrichment.
+- Keep `heard_stories` separate from personal historical episodes. Preserve listening
+  date, narrated-event date, reaction, typed participants, and resolved office/entity
+  names. Hearing about an election does not make the listener a participant or
+  supporter. Current office assignments do not establish historical event location.
+  A subject ledger prevents re-tellings from repeatedly triggering biography
+  generation (legacy 256 IDs; monthly book limit 2,000). See
+  `docs/notes/heard-stories.md`; the user approved the current result for playtesting.
+- Include resolved performance participants as storytellers, never as the people
+  whose historical deeds they recount. Enrich organizations with their current
+  entity type and race; unknown fields remain unknown. Names such as The Letter
+  of Safety can name civilizations, not documents. A story told locally does not
+  prove the organization visited. See `docs/notes/cultural-chronicles.md`.
 - On-demand profiles include directional friends from `hf.info.relationships.hf_visual`
   using documented `core.love` thresholds (50 friend, 75 close friend, 100 kindred
   spirit). Examine at most 128 contacts, retain at most 32 friends, and report
@@ -169,9 +213,10 @@
   Seeing a body is not witnessing its death, and ANYTHING supplies no specific
   emotion. Missing cups/wells do not establish poor drink quality. Preserve these
   distinctions explicitly when evaluating faster biography models.
-- Biographies are not limited to two paragraphs. Target 4–6 developed paragraphs
+- Legacy full biographies are not limited to two paragraphs. Target 4–6 developed paragraphs
   (about 350–550 words) for substantial evidence, 1–3 shorter paragraphs for sparse
-  histories. Required factual anchors for resolvable selected historical deaths,
+  histories. Current monthly chapters override this: one paragraph per month,
+  with 1–3 short introductory paragraphs. Required factual anchors for resolvable selected historical deaths,
   wounds, captivity/release, and artifact creation outrank brevity/thematic choice.
   The worker checks these sentences before publishing or reusing a story, records
   checked event IDs, and visibly fails while preserving old prose on omission.
@@ -247,6 +292,15 @@
   with bounded current/previous-year buckets (256 each), selecting at most 16
   events. Resolve one event per frame, up to 256 reference lookups and 128 KiB
   request files. This is supported, selected evidence, not exhaustive fort history.
+- Annual cultural evidence has a separate `culture_index` over performance incidents:
+  128 records / 2 ms target per monitor batch, current/previous-year site buckets
+  capped at 256 each, latest 4 tellings exported separately from 16 history events.
+  Resolve at most one selected event per frame within the existing shared resolver
+  and 128 KiB request limits. Deduplicate incident IDs, not listener or historical
+  subject IDs. Preserve storyteller, local site/date and narrated subject separately.
+  Namespaced required anchors verify selected resolvable tellings before publication.
+  Truncation/errors mark incomplete coverage. Old completed annual chapters remain
+  immutable; use Year so far for a new draft with enriched evidence.
 - Every fortress load and observed backward-time transition starts a new recording
   branch. Preserve earlier files; do not merge incompatible histories or turn gaps
   into fictional events. Coverage warnings and branch labels belong outside prose.
