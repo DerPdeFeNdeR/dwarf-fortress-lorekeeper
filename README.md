@@ -75,11 +75,14 @@ There are **two separate startup mechanisms**: DFHack starts collection on fortr
 
 Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**, and WSL for optional Codex testing. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended Qwen setup; WSL remains supported for Codex/Luna.
 
-You need Codex sign-in and access to the configured model. The worker currently defaults to **`gpt-5.6-luna` / `low` reasoning**, verified on the development account—not guaranteed for every account. Generation uses your account's limits. ChatGPT-backed Codex login and API-key billing are separate paths; the documented ChatGPT workflow does not require an API key. See [official authentication guidance](https://learn.chatgpt.com/docs/auth).
+Codex sign-in is needed only for the optional Luna path. The player workflow
+defaults to local **`qwen3:8b`** through Ollama. Luna uses **`gpt-5.6-luna` / low
+reasoning** when selected and requires access through the authenticated Codex CLI.
+See [official authentication guidance](https://learn.chatgpt.com/docs/auth).
 
 Commands are labeled **PowerShell**, **WSL**, or **DFHack**. Copy commands only, not terminal prompts such as `PS C:\Users\...>` or error output.
 
-### 1. Install DFHack and WSL
+### 1. Install DFHack (WSL is optional)
 
 Install Steam Dwarf Fortress and its matching DFHack. Launch the game once with DFHack, load a fortress, and check that **Ctrl+Shift+D** opens the DFHack launcher (backtick is another default binding). Exit DF before editing its startup configuration.
 
@@ -91,7 +94,8 @@ C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress
 
 Use your actual Steam library path throughout. Configuration belongs in the **Dwarf Fortress** folder, not the separate **DFHack** folder.
 
-If needed, install WSL in **Administrator PowerShell**:
+WSL is only needed for the optional Codex/Luna developer path. If you choose it,
+install WSL in **Administrator PowerShell**:
 
 ```powershell
 wsl --install -d Ubuntu
@@ -134,7 +138,7 @@ Do not clone a second copy in PowerShell. No compiled plugin, Python packages, H
 
 ### 3. Install Ollama and download the local model
 
-For the native Windows worker currently under validation, see
+For the native Windows worker used by the current player workflow, see
 [native Windows startup](helper/README.md#native-windows-startup-ollama).
 The WSL and native workers must never run against the same save root together.
 
@@ -210,7 +214,15 @@ This starts citizen collection, supported-event indexing, the annual monitor and
 
 ### 5. Start the watcher for a first test
 
-Load a fortress once so the game's `save` directory exists. From the repository root in **WSL**, use your actual save-root location:
+Load a fortress once so the game's `save` directory exists. The recommended
+native Windows command is run from the repository root in **PowerShell**:
+
+```powershell
+.\helper\start_watcher.ps1 -Python python
+```
+
+For the optional Codex/Luna WSL path, use this command from the repository root
+in **WSL**:
 
 ```bash
 python3 helper/watch_save_directory.py "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
@@ -269,7 +281,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$LorekeeperProject\help
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$LorekeeperProject\helper\install_watcher_task.ps1" -ProjectPath "$LorekeeperProject" -SaveDirectory "$LorekeeperSave"
 ```
 
-This creates/replaces **Lorekeeper Queue Watcher**. Execution-policy bypass applies only to that PowerShell invocation. If registration reports **Access is denied**, reopen PowerShell **as administrator for the same Windows user**, repeat the path assignments and rerun. Another administrator account may use different WSL credentials.
+This creates/replaces **Lorekeeper Queue Watcher**, an optional WSL startup task.
+The native Windows player workflow uses the foreground PowerShell command above;
+it does not require this task. Execution-policy bypass applies only to that
+PowerShell invocation. If registration reports **Access is denied**, reopen
+PowerShell **as administrator for the same Windows user**, repeat the path
+assignments and rerun. Another administrator account may use different WSL
+credentials.
 
 Registration does **not** start the task immediately. Start/check it now in **PowerShell**:
 
@@ -332,8 +350,8 @@ Start-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'
 | Unknown command | Use `lorekeeper/test`, not `lorekeeper test` or `lorekeeper/tests`. Check the script path and restart DF. |
 | Missing button | Try the command, then `gui/overlay`; saved enable/position preferences are respected. |
 | Collector counters unchanged | Unpause. After `collect stop`, use `collect start` to resume this session. |
-| Historian offline/pending | Check task state, Python process, WSL login-shell PATH and watcher log. |
-| Codex missing in task | In PowerShell run `wsl.exe -- bash -lc 'command -v codex; codex login status'`. The Linux executable/login must work in that shell, not only your interactive terminal. |
+| Historian offline/pending | Check Ollama, the native Python process, and the watcher log. For optional Luna, check the WSL task and Codex login. |
+| Codex missing in task | For the optional Luna path, run `wsl.exe -- bash -lc 'command -v codex; codex login status'`. The Linux executable/login must work in that shell, not only your interactive terminal. |
 | Task Ready after logon | Inspect `Get-ScheduledTaskInfo -TaskName 'Lorekeeper Queue Watcher'` and the watcher log. Manual start is a diagnostic, not the desired permanent workflow. |
 | Another worker owns the save root | Stop the duplicate worker/task; do not delete the lock file to bypass ownership. |
 | Save-path error | Verify Steam location, existing `save` directory and write permission; keep the whole path in one quoted argument. |
@@ -345,7 +363,12 @@ Start-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'
 
 Files live beside saves: `lorekeeper-history.jsonl`, `lorekeeper-history-index/`, `lorekeeper-views/`, `lorekeeper-chronicles/`, and `lorekeeper-environment/`. The save root also has a worker heartbeat/lock. Back up the full region folder **including sidecars**; deleting caches can lose generated prose. Reloaded saves can have separate recording branches.
 
-Structured game information—including names, relationships, and events—is sent through your authenticated Codex client. This is **not fully offline**. Credentials stay outside Lua/save files. Never commit credentials, private save data, generated profiles or rejected drafts to this public repository. The HTTP API prototype is not used by these readers.
+Structured game information—including names, relationships, and events—is sent to
+the selected model provider. The default Qwen setup sends it to local Ollama; the
+optional Luna path uses your authenticated Codex client. This is **not fully
+offline** in every configuration. Credentials stay outside Lua/save files. Never
+commit credentials, private save data, generated profiles or rejected drafts to
+this public repository. The HTTP API prototype is not used by these readers.
 
 To disable, stop the scheduled task with `Stop-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'`, then use `Disable-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'`. Remove only the Lorekeeper lines added to `script-paths.txt` and `init/dfhack.init`, and restart DF. Keep saved data if you may return. Stopping only the citizen collector does not stop the separate annual/environment monitor.
 

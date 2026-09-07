@@ -1,10 +1,10 @@
 # Lorekeeper background worker
 
 For Windows installation, use the [root README](../README.md#windows-developer-installation).
-All commands here run in **WSL from the repository root**, unless stated otherwise.
-The active worker uses Python's standard library and a local Ollama server by default.
-The worker supports Windows Python as well as WSL. Native Windows uses byte-range
-file locks; WSL uses POSIX locks. Do not run both workers on the same save root:
+Commands below are labeled **PowerShell** or **WSL**. The active player setup uses
+the native Windows worker, Windows Python, and local Ollama by default. WSL remains
+supported for the optional Codex/Luna path. Native Windows uses byte-range file
+locks; WSL uses POSIX locks. Do not run both workers on the same save root:
 cross-platform lock interoperability is not assumed.
 
 ### Native Windows startup (Ollama)
@@ -16,7 +16,7 @@ Install Python 3.13 for your Windows user. From PowerShell in the checkout:
 .\helper\start_watcher.ps1 -Python "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe"
 ```
 
-Stop the existing WSL worker before the second command. The launcher runs in the
+Stop any existing WSL worker before the second command. The launcher runs in the
 foreground; Ctrl+C stops it. It accepts `-SaveDirectory` for another installation.
 `-Check` only validates imports/arguments, with no save processing. The existing
 scheduled-task installer still launches WSL; do not use it for native startup.
@@ -40,7 +40,7 @@ time. `--once` is a development processing pass that **can invoke the model and
 write results**; it is not a read-only health check and does not acquire the normal
 continuous worker lock. Stop the normal watcher before using it.
 
-The startup wrapper resolves its checkout and redirects output into a WSL log:
+The portable startup wrapper is the WSL option and redirects output into a WSL log:
 
 ```bash
 bash helper/start_watcher.sh "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
@@ -54,7 +54,7 @@ start a Windows scheduled task itself. See the root README for installation,
 
 ## Configuration
 
-The Codex worker explicitly passes these settings instead of inheriting your
+The Lorekeeper worker explicitly passes these settings instead of inheriting your
 interactive Codex model configuration:
 
 | Variable | Default | Meaning |
@@ -67,8 +67,8 @@ interactive Codex model configuration:
 | `XDG_STATE_HOME` | `~/.local/state` | Wrapper log parent |
 
 The current model is verified on the development account; availability differs.
-To try another account-supported model, set its actual identifier in the WSL
-shell before starting the foreground worker. These exports affect that shell's
+To try another registered model/profile, set its profile before starting the
+foreground worker. These exports affect that shell's
 children, not an already-running task:
 
 ```bash
@@ -78,7 +78,8 @@ export LOREKEEPER_MODEL='qwen3:8b'
 export LOREKEEPER_REASONING_EFFORT='low'
 ```
 
-Ollama must be running on Windows before the WSL watcher starts. The worker
+Ollama must be running on Windows before the native watcher starts (or before the
+WSL watcher when using WSL). The worker
 uses JSON-schema output, disables Qwen thinking for latency, and keeps the model
 loaded for 30 minutes. To use the previous hosted path, set
 `LOREKEEPER_PROVIDER=codex-cli`, choose a Codex model, and verify `codex login
@@ -91,9 +92,9 @@ tables. Two real-save introductions measured 13,730 and 17,282 input tokens;
 this does not guarantee that every future request will fit.
 
 Qwen3 non-thinking sampling uses temperature 0.7, top-p 0.8, top-k 20 and min-p 0,
-following Qwen's recommendations. The saved `ollama_preset` identifies this
-generation version for caching. The Codex effort setting does not enable thinking
-in Ollama; Ollama always receives `think: false`.
+following Qwen's recommendations. These model options and the strategy versions
+are included in the canonical generation identity for caching. The Codex effort
+setting does not enable thinking in Ollama; Ollama always receives `think: false`.
 
 Preset `qwen3-personal-v7` uses compiled personal facts, relevant chapter context,
 and dedicated prose output. Quiet months target 60–100 words, busier months
@@ -141,8 +142,9 @@ has a separate retry-on-error policy.
 PYTHONDONTWRITEBYTECODE=1 TMPDIR=/dev/shm python3 -m unittest discover -s helper -p 'test_*.py'
 ```
 
-At published checkpoint `8dd7a66`: 176 tests, 169 passed and seven opt-in live tests
-skipped; 115 additional tests run in-game via `lorekeeper/test`.
+At the current published checkpoint, 211 Python tests ran: 204 passed and seven
+opt-in live tests were skipped. The earlier `8dd7a66` totals below are historical;
+115 additional tests ran in-game at that earlier checkpoint.
 Live tests use your authenticated model account and create temporary fixtures.
 Run only the relevant bounded check, from **`helper/`**:
 

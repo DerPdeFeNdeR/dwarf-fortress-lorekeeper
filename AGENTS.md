@@ -19,8 +19,9 @@
   Reader D/retry track their exact request and select the requested draft.
   Section comparisons remain opt-in experiments; no production section cache.
 
-- 2026-09-07: local Qwen3/Ollama and native Windows worker migration is in progress,
-  uncommitted. Read `docs/notes/windows-ollama.md` before switching workers.
+- 2026-09-07: local Qwen3/Ollama and native Windows worker migration is complete
+  and published. Read `docs/notes/model-owned-writers.md` and
+  `docs/notes/windows-ollama.md` before switching workers.
   Windows and WSL lock interoperability is not guaranteed; stop the old worker
   before starting the other platform. Do not automatically register startup tasks.
 - Qwen coverage tuning is authorized: accept ordinary storytelling paraphrases
@@ -145,7 +146,7 @@
 - Do not overwrite or modify the user's DFHack installation from this repository unless explicitly requested. During development, use a documented copy/symlink/install step.
 - Account for DF/DFHack updates: keep a small compatibility layer and record the game/DFHack version with collected data.
 - Avoid storing only dwarf IDs. IDs can be useful within a world, but names, race, site/world identity, and timestamps should also be retained where available.
-- Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The optional HTTP API prototype defaults to `gpt-5-mini`; the active Codex watcher explicitly defaults to `gpt-5.6-luna` with low reasoning.
+- Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The optional HTTP API prototype defaults to `gpt-5-mini`; the active native worker defaults to local `qwen3:8b` through Ollama. The optional Codex/Luna profile uses `gpt-5.6-luna` with low reasoning.
 - Keep the worker's model and effort independent of interactive Codex defaults.
   `LOREKEEPER_MODEL` and `LOREKEEPER_REASONING_EFFORT` configure its invocation;
   never change the user's personal Codex config for Lorekeeper. Memoire cache

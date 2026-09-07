@@ -128,8 +128,9 @@ or start new development automatically. Preserve saves and cached prose.
 
 The root [README](README.md) is the Windows developer installation guide.
 DFHack autostart handles collection, event indexing and the annual/environment
-monitor. The separate Windows logon task runs the WSL watcher. Launching the
-watcher with DFHack remains a future preference, not implemented behavior.
+monitor. The native Windows worker is the current player workflow. The separate
+Windows logon task still launches the optional WSL watcher. Launching the worker
+with DFHack remains a future preference, not implemented behavior.
 
 In-game:
 
@@ -150,7 +151,8 @@ Default WSL log: `~/.local/state/lorekeeper/watcher.log`.
 
 Profile 9; prepared view 26; monthly protocol 1 / book 2; annual request 2.
 See [contracts](docs/schema.md) and [worker guide](helper/README.md).
-Default model: `gpt-5.6-luna`, low reasoning; other accounts may lack access.
+Default profile: `qwen-fast` (`qwen3:8b` through native Windows Ollama). Luna's
+optional `luna-literary` profile uses `gpt-5.6-luna` with low reasoning.
 Do not change personal Codex settings for Lorekeeper.
 
 Published checkpoint evidence (2026-09-06):

@@ -1,9 +1,10 @@
 # Collection, generation, and presentation boundary
 
 Current pipeline: Windows DFHack writes bounded profiles/requests beside saves;
-`helper/watch_save_directory.py` in WSL prepares timelines and model inputs, invokes
-the authenticated Codex CLI, validates output and writes caches. Readers poll those
-prepared files without network calls or history parsing in the game thread.
+the native Windows `helper/watch_save_directory.py` prepares timelines and model
+inputs, invokes local Ollama/Qwen by default, validates output and writes caches.
+Readers poll those prepared files without network calls or history parsing in the
+game thread. WSL remains an optional environment for the Codex/Luna profile.
 
 ## Current story workflow
 
@@ -17,10 +18,11 @@ prepared files without network calls or history parsing in the game thread.
 - Current view schema is 26, profile schema 9, monthly request protocol 1/book 2,
   annual request schema 2. See [contracts](schema.md) for storage and provenance.
 
-The worker explicitly selects `gpt-5.6-luna` / low reasoning by default. Account
-access must be verified; model/effort can be configured without changing personal
-Codex defaults. Credentials stay outside Lua and saves. Structured game data is
-sent to the model provider; this is not a fully offline workflow. See
+The worker explicitly selects the registered `qwen-fast` profile (`qwen3:8b`) by
+default. Luna's `luna-literary` profile is separate and requires Codex access.
+Model/profile settings can be configured without changing personal Codex defaults.
+Credentials stay outside Lua and saves. Structured game data is sent to the model
+provider; this is not a fully offline workflow. See
 [worker documentation](../helper/README.md).
 
 ## Evidence and cache safeguards
@@ -60,6 +62,7 @@ not current Memoires/Chronicles. They are developer utilities, not required play
 steps. `helper/server.py` is a separate localhost Platform API prototype and is not
 wired to the current readers.
 
-Startup remains two-part: DFHack autostart for collection and an optional Windows
-logon task for the WSL worker. Launching the worker with DFHack itself is a future
-product goal, not implemented behavior.
+Startup remains two-part: DFHack autostart for collection and a separately started
+worker. The recommended player worker is native Windows; an optional logon task or
+WSL foreground wrapper can be used for advanced setups. Launching the worker with
+DFHack itself is a future product goal, not implemented behavior.

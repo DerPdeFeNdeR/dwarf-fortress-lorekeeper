@@ -1,11 +1,12 @@
 # Documentation index
 
 For installation, start with the root [README](../README.md). Current operational
-documentation describes implementation checkpoint `8dd7a66`, audited 2026-09-07.
+documentation describes the published model-owned writer architecture, audited
+2026-09-07. Older notes retain their original checkpoint claims explicitly.
 
 - [Windows developer setup and troubleshooting](../README.md#windows-developer-installation)
 - [DFHack commands and controls](../dfhack/README.md)
-- [WSL worker configuration and tests](../helper/README.md)
+- [Worker configuration and tests (native Windows or optional WSL)](../helper/README.md)
 - [Data contracts](schema.md)
 - [Model boundary and caching](translation.md)
 - [Current roadmap](../PLAN.md)

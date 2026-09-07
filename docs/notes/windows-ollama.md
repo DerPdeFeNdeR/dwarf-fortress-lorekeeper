@@ -1,5 +1,9 @@
 # Windows Ollama migration — 2026-09-07
 
+This is a chronological migration record. The final state is the native Windows
+worker described in the **Live cutover** section below; earlier observations are
+retained as evidence and are not current setup instructions.
+
 The user authorized Qwen3 integration and proceeding with the Windows worker.
 Ollama has qwen3:8b, Q4_K_M, digest
 500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41.
