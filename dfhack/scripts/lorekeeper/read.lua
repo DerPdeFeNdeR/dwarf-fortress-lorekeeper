@@ -82,6 +82,14 @@ function BiographyWindow:refresh(force, reset_scroll)
         if data then
             add('Status: ' .. tostring(data.state))
             if data.error then add(data.error) end
+            local coverage=data.historical_event_coverage
+            if coverage and coverage.status then
+                add(('Historical event index: %s; scanned %d/%d; errors %d.'):format(
+                    coverage.status,coverage.scanned or 0,coverage.total or 0,coverage.errors or 0))
+                if coverage.truncated or coverage.subject_truncated then
+                    add('Historical event coverage is capped; this is not a complete life history.')
+                end
+            end
             local pages=math.max(1,data.pages or 0)
             self.page=math.min(self.page,pages-1)
             add(('Timeline: %d records, %d events. Page %d of %d.'):format(

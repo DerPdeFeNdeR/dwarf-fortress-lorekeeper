@@ -19,6 +19,9 @@ function status(data, requested, available, request_error)
     end
     if data and data.state == 'failed' then return 'The update failed. Try Update or see Details.' end
     if data and data.state == 'empty' then return 'No recorded history yet.' end
+    if data and data.historical_event_coverage and data.historical_event_coverage.status=='building' then
+        return 'Older events were still indexing. Choose Update to include newly indexed events.'
+    end
     return 'Saved biography. Choose Update to include newer experiences.'
 end
 

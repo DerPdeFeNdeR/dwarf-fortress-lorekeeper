@@ -10,6 +10,9 @@ local display_text = reqscript('lorekeeper/display_text')
 local profile = reqscript('lorekeeper/profile')
 local references = reqscript('lorekeeper/references')
 local reader_text = reqscript('lorekeeper/reader_text')
+local biography_overlay = reqscript('lorekeeper/overlay')
+local friends = reqscript('lorekeeper/friends')
+local event_index = reqscript('lorekeeper/event_index')
 
 local passed = 0
 
@@ -22,6 +25,74 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local abduction=event_index.normalize({id=10,target=1,snatcher=2},'HIST_FIGURE_ABDUCTED')
+assert_true(abduction.kind=='abduction' and abduction.participants[1].role=='abducted',
+    'abduction retains victim and abductor roles')
+local released=event_index.normalize({id=11,freeing_hf=2,rescued_hfs={1,3}},'HF_FREED')
+assert_true(#released.participants==3 and released.kind=='release',
+    'release indexes both liberator and rescued figures')
+local travel=event_index.normalize({id=12,group={1},reason={is_return=false,is_escape=true}},'HIST_FIGURE_TRAVEL')
+assert_true(travel.is_escape and travel.is_return==false,'travel preserves explicit escape and return flags')
+local link=event_index.normalize({id=13,hf=1,hf_target=2,type=7},'ADD_HF_HF_LINK')
+assert_true(link.type_id==7 and link.participants[1].histfig_id==1 and link.participants[1].role=='subject',
+    'personal link events retain source target direction and type')
+local job=event_index.normalize({id=14,hfid=1,old_job=2,new_job=3},'CHANGE_HF_JOB')
+assert_true(job.old_job_id==2 and job.new_job_id==3,'profession events retain both endpoints')
+local candidates={{id=1,kind='artifact_creation'}}
+for i=2,20 do table.insert(candidates,{id=i,kind='travel'}) end
+local selected=event_index.select_events(candidates,8)
+assert_true(#selected==8 and selected[1].kind=='artifact_creation',
+    'routine travel does not displace a distinctive artifact in selection')
+local protected=event_index.new_index()
+protected:add({id=1,kind='artifact_creation',participants={{histfig_id=1}}})
+for i=2,50 do protected:add({id=i,kind='travel',participants={{histfig_id=1}}}) end
+local has_artifact=false
+for _,row in ipairs(protected.by_figure[1]) do if row.kind=='artifact_creation' then has_artifact=true end end
+assert_true(has_artifact and #protected.by_figure[1]==32,'bounded retention protects milestones from routine churn')
+assert_true(event_index.needs_reset({scanned=5,time=10},4,10) and
+    event_index.needs_reset({scanned=5,time=10},5,9) and
+    not event_index.needs_reset({scanned=5,time=10},6,11),
+    'historical index resets on shrink or time reversal but not append')
+assert_true(reader_text.status({state='ready',historical_event_coverage={status='building'}},nil,true):find('indexing'),
+    'reader discloses historical events still indexing at capture')
+local battle=event_index.normalize({id=1,year=2,seconds=3,group1={4},group2={5}},
+    'HIST_FIGURE_SIMPLE_BATTLE_EVENT')
+assert_true(battle.participants[2].role=='group2' and battle.participants[2].histfig_id==5,
+    'historical battles preserve explicit participant sides')
+assert_true(event_index.normalize({id=1},'WAR_FIELD_BATTLE')==nil,
+    'fortress-wide battle does not imply individual participation')
+local artifact=event_index.normalize({id=2,flags2={name_only=true},creator_hfid=4},'ARTIFACT_CREATED')
+assert_true(artifact.naming_only and artifact.participants[1].role=='creator',
+    'artifact event preserves naming-only flag')
+local index=event_index.new_index(2)
+index:add(battle)
+index:add({id=2,participants={{histfig_id=6}}})
+assert_true(index.links==2 and index.truncated and index.by_figure[6] and not index.by_figure[4],
+    'historical event index bounds links while retaining new evidence at capacity')
+local bounded=event_index.new_index()
+for i=1,40 do bounded:add({id=i,participants={{histfig_id=4},{histfig_id=4}}}) end
+assert_true(#bounded.by_figure[4]==32 and bounded.links==32 and bounded.by_figure[4][1].id==9,
+    'historical index deduplicates participant links and retains bounded recent events')
+assert_true(friends.classify(49)==nil and friends.classify(50)=='friend' and
+    friends.classify(74)=='friend' and friends.classify(75)=='close_friend' and
+    friends.classify(100)=='kindred_spirit' and friends.classify(101)==nil,
+    'friendship classification respects documented love thresholds')
+local friend_rows=friends.capture({{histfig_id=1,core={love=5}}, {histfig_id=2,core={love=60}}},
+    references.new({historical_figure=function(id) return {name='Friend '..id} end}))
+assert_true(#friend_rows==1 and friend_rows[1].target_hf==2 and friend_rows[1].directional,
+    'friend capture excludes acquaintances and preserves direction')
+local contacts={}
+for i=1,129 do table.insert(contacts,{histfig_id=i,core={love=0}}) end
+local _,friend_limits=friends.capture(contacts,references.new({}))
+assert_true(#friend_limits==1,'friendship capture bounds contact scanning')
+assert_true(biography_overlay.eligible({open=true,active_sheet=0,active_id=7},0),
+    'biography button is eligible on an open unit sheet')
+assert_true(not biography_overlay.eligible({open=false,active_sheet=0,active_id=7},0) and
+    not biography_overlay.eligible({open=true,active_sheet=1,active_id=7},0),
+    'biography button excludes closed and non-unit sheets')
+assert_true(not biography_overlay.eligible({open=true,active_sheet=0,active_id=-1},0) and
+    not biography_overlay.eligible({open=true,active_sheet=0,active_id=7,unit_overview_customizing=true},0),
+    'biography shortcut is inactive during customization or invalid selection')
 local reader_request={unit_id=7,year=102,tick=123,nonce=456}
 local reader_data={state='ready',request=reader_request,story='A quiet life.\n\nA lasting memory.',
     record_count=50,event_count=34}

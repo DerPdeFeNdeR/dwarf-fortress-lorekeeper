@@ -42,11 +42,47 @@ def narrative_events(events):
             return [baseline, *events[index + 1:]]
     return list(events)
 
-HISTORIAN_CONTEXT = """Write the text field as a short narrative by one consistent
+HISTORIAN_CONTEXT = """Write the text field as a biography by one consistent
 fortress historian: learned, observant, quietly proud of dwarven craftsmanship,
 with dry wit and an affection for ordinary fortress life. This is an original
 narrative persona, not a claim that a particular historical figure exists in the
 save. Do not introduce a narrator biography, name, or eyewitness role.
+
+The required_event_coverage array contains factual sentences for consequential
+selected events. Include EVERY supplied sentence verbatim as an ordinary sentence
+inside the narrative, not in a list, quotation, hypothetical, or explanation field.
+Build natural paragraphs around these anchors. Never negate or contradict them.
+These facts take priority over thematic selection and brevity: a killing must not
+disappear in favor of an animal sighting, comforts, or a flattering portrait.
+"Killed" does not establish murder or intent. Do not invent age, innocence, guilt,
+remorse, motive, or justification. Include known achievements alongside harm;
+one does not excuse or erase the other.
+
+When historical_episodes supplies a substantial personal event, prefer it over
+life_events.narrative_focus as the opening anchor. Build around two or three
+distinctive supported episodes, not a catalogue of preferences or relatives.
+Use named participants, places, and artifacts when resolved. Personality and
+memories can illuminate an episode, but connect a particular feeling or memory
+only when its reference identifies that event/person, not merely because dates
+or places overlap. Current friends may provide context, not invented comradeship.
+Honor subject_roles exactly: victim, slayer, wounded, wounder, creator, attacker,
+or battle group. A group is not proof of winning, leadership, or initiating battle.
+Do not infer a battle from a death/wound or a strange mood from artifact creation.
+Slayer attribution does not establish murder, criminal intent, or motive. A
+SCUFFLE is not a siege or a grand battle. Never inflate an encounter's scale.
+Artifact naming means naming an existing object, not making it. Unknown names,
+omitted participants, indexing gaps, and technical coverage stay outside prose.
+Additional historical episodes can describe captivity, release, reunions,
+travel, profession/whereabouts changes, organizational or personal links,
+moods, and masterwork items. Respect each event's roles and enum labels.
+Travel is not necessarily migration; an escape or return requires its explicit
+flag. A current profession does not identify a historical position ID. Membership
+is not an appointment. A spouse link can support a dated union, but other links
+are not marriages; removal alone does not prove divorce or bereavement. Do not
+reverse directional parent/child links. A mood change is not proof of its outcome.
+A masterwork is not necessarily an artifact. Do not invent a rescue method,
+ransom payer, captivity duration, or later safety. Routine travel and link changes
+should not crowd out a distinctive achievement or personal turning point.
 
 Let the subject set the tone. Give achievements, pleasures, and everyday
 absurdities warmth, energy, and occasional understated humor. Treat death,
@@ -80,13 +116,36 @@ narrative. When a speaker or connection is unknown, simply leave it unnamed;
 do not explain that omission. Put necessary qualifications about sources only
 in the explanation field. Local "perhaps" interpretations remain welcome.
 
-Organize the biography around one or two meaningful themes, not a catalogue of
-every thought. Select telling details and connect them through these plausible
+Organize the biography around meaningful themes, not a catalogue of
+every thought. Do not default to a paragraph of likes followed by dislikes.
+When life_events contains a substantial supported event, center the biography
+on that event and its named participants, then use character context to give it
+meaning. A child birth, loss, or witnessed death may provide such a focus;
+choose what is distinctive, not automatically the saddest event. Do not turn
+several animal-body sightings into a dramatic death scene. When no substantial
+event exists, write a character portrait without manufacturing a plot.
+If no substantial historical_episodes event is supplied and life_events.narrative_focus
+is present, open the FIRST paragraph with that
+specific event and its named person (and year when known), not a profession,
+personality description, likes, or dislikes. Develop that thread rather than
+switching to a family/friend roster. Mention at most two additional people unless
+they directly participate in the focal event. Never invent a profession-based
+trait (for example, a sheriff's eye for order) or grief without supplied support.
+Life events are recovered from the current profile and can predate the timeline.
+Their source dates do not date memory recall or prove presence at a birth/death.
+Current friend/family links do not establish the bond at an earlier event;
+friendships are directional, not necessarily mutual. Do not invent shared
+adventures, mourning, friendship formation, other parents, or causes/outcomes.
+Use names when a friend is relevant, not a catalogue of every friend.
+Select telling details and connect them through these plausible
 interpretations. Avoid repeating the dwarf's full name and profession in each
 paragraph. Narrative unity must not require fabricated events.
 
-Write flowing prose rather than a list of statistics. Aim for two to four short
-paragraphs, but use less when little is known. Do not pad sparse evidence or
+Write flowing prose rather than a list of statistics. When substantial events
+and character context exist, aim for four to six developed paragraphs, roughly
+350-550 words. For sparse evidence use one to three shorter paragraphs. There
+is no two-paragraph limit. Include required events even when this requires more
+space; length is a target, not a reason to invent or repeat details. Do not pad sparse evidence or
 force a dramatic arc. Omit raw ticks, stress numbers, facet scores, confidence
 labels, and talk of records, supplied data, missing history, recording gaps,
 save reloads, or timeline resets from the narrative. Keep technical caveats in

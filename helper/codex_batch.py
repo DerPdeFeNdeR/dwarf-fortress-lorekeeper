@@ -79,7 +79,7 @@ def build_prompt(items: list[dict[str, Any]]) -> str:
         "Process the following Lorekeeper translation batch. Use only the supplied "
         "raw values and context. Do not inspect, edit, or create files. Do not invent "
         "game events or facts. Return one result for every item, preserving each id. "
-        "Keep text and explanation concise.\n\n"
+        "Follow each item's requested text length and coverage; keep explanation concise.\n\n"
         + json.dumps(items, ensure_ascii=False, sort_keys=True, indent=2)
     )
 

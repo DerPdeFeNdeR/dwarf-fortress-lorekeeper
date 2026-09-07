@@ -7,6 +7,7 @@ local STATE_KEY = 'lorekeeper.autostart'
 
 local function start_collector()
     if dfhack.isMapLoaded() and df.global.gamemode == df.game_mode.DWARF then
+        reqscript('lorekeeper/event_index').start()
         dfhack.run_command('lorekeeper/collect start')
     end
 end

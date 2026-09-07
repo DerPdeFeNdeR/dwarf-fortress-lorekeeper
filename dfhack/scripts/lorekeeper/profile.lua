@@ -46,7 +46,7 @@ end
 
 function capture(unit)
     local resolver = references.new(references.game_providers())
-    local result = {schema_version=2, unit_id=unit.id,
+    local result = {schema_version=5, unit_id=unit.id,
         histfig_id=unit.hist_figure_id, captured_at={year=df.global.cur_year,
         tick=df.global.cur_year_tick}, source={df_version=dfhack.getDFVersion(),
         dfhack_version=dfhack.getDFHackVersion()}, limitations={}, figures={},
@@ -70,6 +70,7 @@ function capture(unit)
         end
     end
     local figure = df.historical_figure.find(unit.hist_figure_id)
+    result.historical_events=reqscript('lorekeeper/event_index').capture(unit.hist_figure_id,resolver)
     section('relationships', figure and figure.histfig_links, function(link)
         local target = resolver:resolve('historical_figure', link.target_hf)
         return {target_hf=link.target_hf, kind=tostring(link._type),
@@ -129,6 +130,11 @@ function capture(unit)
         end
         return row
     end)
+    local social = field(field(figure,'info'),'relationships')
+    local friend_limits
+    result.friends, friend_limits = reqscript('lorekeeper/friends').capture(field(social,'hf_visual'),resolver)
+    for _,note in ipairs(friend_limits) do table.insert(result.limitations,note) end
+    table.insert(result.limitations,'Friends are directional current observations, not mutual bonds or dated formation events.')
     result.personality_facets = scalar_fields(field(personality, 'traits'),
         {'ANXIETY_PROPENSITY','ORDERLINESS','ALTRUISM','BRAVERY','CRUELTY',
          'DUTIFULNESS','FRIENDLINESS','STRESS_VULNERABILITY'})
@@ -150,8 +156,10 @@ local unit = dfhack.gui.getSelectedUnit(true)
 if not unit then print('The Lorekeeper: no unit is selected.'); return end
 local profile = capture(unit)
 print('The Lorekeeper: on-demand profile for ' .. dfhack.units.getReadableName(unit, true))
+print(('  indexed historical events: %d (%s)'):format(#profile.historical_events.events,
+    profile.historical_events.coverage.status))
 for _, name in ipairs({'emotions','shortterm_memories','longterm_memories',
-        'core_memories','values','needs','preferences','relationships'}) do
+        'core_memories','values','needs','preferences','relationships','friends'}) do
     print(('  %s: %d entries (memory sections may include empty slots)'):format(name, #profile[name]))
 end
 local names = {}
@@ -161,6 +169,10 @@ for _, link in ipairs(profile.relationships) do
         print(('  relationship: %s -> %s [HF %d]'):format(link.kind,
             dfhack.utf2df(names[link.target_hf] or 'unresolved'), link.target_hf))
     end
+end
+for _, friend in ipairs(profile.friends) do
+    print(('  %s: %s [HF %s; current, directional]'):format(friend.kind,
+        dfhack.utf2df(friend.target_name or 'unresolved'),tostring(friend.target_hf)))
 end
 for _, reference in ipairs(profile.references) do
     local details = reference.details or {}

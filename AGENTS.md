@@ -29,7 +29,12 @@
   player must close/select another dwarf/reopen to switch subjects for now.
   The user approved the reader in-game on 2026-09-06; see
   `docs/notes/biography-reader.md` for checks and remaining coverage limits.
-  The vanilla-screen entry button is the next separate milestone.
+  The vanilla-screen entry is `lorekeeper/overlay.biography`: a movable panel
+  visible on fortress-mode unit sheets, with a clickable Read biography label
+  and Ctrl+L shortcut. It defaults on when discovered by the overlay framework;
+  honor saved enable/position preferences. No idle collection, file polling, or
+  model work belongs in this overlay. It rechecks the active unit at activation.
+  Shortcut integration passed and the user confirmed the button works in-game.
 - The user accepted Luna with low reasoning and its roughly 11-second measured
   generation time for now. Automatic in-game updates without R were verified.
   Further model comparisons, no-reasoning trials, and speculative biography
@@ -94,7 +99,7 @@
   collector. Capture is capped per section (64 entries, 128 emotions), with a
   128 KiB file limit; unsupported/truncated data must be reported. R does not
   recapture; reopening does. Compact semantic profile content participates in
-  schema-v12 story caching, excluding capture/recall time and emotional strength.
+  schema-v16 story caching, excluding capture/recall time and emotional strength.
   Full profiles remain separate from the compact model input. The user verified initial profile
   capture and all 33 then-current Lua tests; see biography audit notes.
 - Resolve Death/UnexpectedDeath references as historical figures only; do not
@@ -107,13 +112,57 @@
   not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
   error, and budget-exhausted status. Cache only within one capture so mutable
   names and save/world changes cannot reuse stale objects. Limit 160 references
-  and link depth 2. Profile schema 2 / story schema 12 use typed references
+  and link depth 2. Profile schema 5 / story schema 16 use typed references
   and unique full-name accent restoration; never guess among ambiguous matches.
+- On-demand profiles include directional friends from `hf.info.relationships.hf_visual`
+  using documented `core.love` thresholds (50 friend, 75 close friend, 100 kindred
+  spirit). Examine at most 128 contacts, retain at most 32 friends, and report
+  truncation. Do not equate acquaintances with friends or claim mutual friendship.
+  Historical-figure references retain verified born/died year and tick fields.
+  Python derives at most 24 life events from these references and death incidents,
+  including child births and deaths of linked family/friends. Dates are event
+  dates, not memory recall dates; current bonds do not prove historical bonds or
+  awareness/grief. Do not infer marriages, other parents, or friendship formation.
+  Choose a supported narrative focus, with a portrait fallback for sparse data.
+  Never add this profile work to the periodic collector or synchronously scan world history.
+  See `docs/notes/life-events-and-friends.md` for evidence and remaining review.
+- `lorekeeper/event_index` incrementally indexes supported world-history event
+  types in a separate session-local task, started by autostart or first capture.
+  Each batch visits at most 128 records with a 2 ms CPU-time target, yielding
+  between batches even while paused. It retains at most 50,000 participant links,
+  32 events per figure, and 32 members per participant group. Profile capture copies
+  at most 8 matching events with 8 named participants each; it never scans the log.
+  Unload, time reversal, or vector shrink resets the index. New records are polled.
+  No persistent index/config changes are required; current names resolve on demand.
+  Supported events: explicit battle groups, site attackers, deaths, wounds,
+  artifact creation/naming, abduction/release/enslavement/ransom, reunions,
+  travel, profession/whereabouts changes, personal/organizational link changes,
+  moods, and masterwork items. A fixed-size link ring evicts old links when full
+  rather than refusing newer evidence. Per-figure retention favors milestones
+  over routine travel; selection favors kind diversity within the same 8-event cap.
+  Coverage remains partial. Do not infer immigration from travel, appointment
+  from membership, or divorce/death from removed links. Unresolved position IDs
+  remain unnamed; a current profession is not evidence of the historical title.
+  Never infer participation from fortress residence,
+  victory from group membership, murder intent from slayer attribution, or
+  a strange mood from artifact creation. Retain event IDs, roles, and coverage.
+  Profiles captured during indexing stay partial until Update/reopen; disclose
+  this outside the prose. See `docs/notes/historical-event-index.md`.
 - Keep writing-process commentary out of the historian's prose, including claims
   about what is not invented. Show a blank line between biography and timeline.
   Seeing a body is not witnessing its death, and ANYTHING supplies no specific
   emotion. Missing cups/wells do not establish poor drink quality. Preserve these
   distinctions explicitly when evaluating faster biography models.
+- Biographies are not limited to two paragraphs. Target 4–6 developed paragraphs
+  (about 350–550 words) for substantial evidence, 1–3 shorter paragraphs for sparse
+  histories. Required factual anchors for resolvable selected historical deaths,
+  wounds, captivity/release, and artifact creation outrank brevity/thematic choice.
+  The worker checks these sentences before publishing or reusing a story, records
+  checked event IDs, and visibly fails while preserving old prose on omission.
+  Coverage failures do not auto-retry. This is a bounded omission guard, not a
+  proof of all prose claims or completeness of the game history. Never infer
+  murder, intent, remorse, or a victim's age from slayer attribution alone.
+  See `docs/notes/biography-event-coverage.md`.
 - In this installation, name lookup uses `dfhack.translation.translateName`,
   not `dfhack.TranslateName`. Inline multiword Lua commands need the `:lua` form.
 - Split story paragraph breaks before UTF-8-to-DF conversion; preserve blank

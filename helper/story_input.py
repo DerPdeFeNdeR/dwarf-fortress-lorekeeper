@@ -4,6 +4,9 @@ import json
 import re
 from collections import Counter
 from historian import narrative_events
+from life_events import collect as collect_life_events
+from historical_episodes import collect as collect_historical_episodes
+from story_coverage import requirements
 
 
 def stable_json(value):
@@ -28,7 +31,7 @@ def compact_profile(profile):
     if not profile:
         return None
     result = {k: profile[k] for k in ('unit_id', 'histfig_id', 'figures',
-              'relationships', 'values', 'preferences', 'personality_facets', 'limitations') if k in profile}
+              'relationships', 'friends', 'values', 'preferences', 'personality_facets', 'limitations') if k in profile}
     result['references'] = [r for r in profile.get('references', []) if r.get('status') == 'resolved']
     for key in ('emotions', 'shortterm_memories', 'longterm_memories'):
         result[key] = thoughts(profile.get(key, []))
@@ -80,7 +83,10 @@ def build_story_input(identity, events, profile):
             if event.get(key):
                 row[key] = thoughts(event[key])
         compact.append(row)
+    episodes=collect_historical_episodes(profile)
     return dict(identity=identity, events=compact, biography_profile=compact_profile(profile),
+                life_events=collect_life_events(profile),
+                historical_episodes=episodes, required_event_coverage=requirements(episodes),
                 stress_bands=list(dict.fromkeys(stress)), final_stress_band=stress[-1] if stress else None,
                 numerical_note='Stress/focus bands are floor(value/1000), not diagnosed mental-state categories.')
 

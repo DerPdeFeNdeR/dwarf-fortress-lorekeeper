@@ -58,7 +58,9 @@ function game_providers()
     providers.historical_figure = function(id)
         local object = df.historical_figure.find(id)
         if object then return {name=utf(dfhack.translation.translateName(object.name)),
-            unit_id=object.unit_id} end
+            unit_id=object.unit_id, born_year=field(object,'born_year'),
+            born_tick=field(object,'born_seconds'), died_year=field(object,'died_year'),
+            died_tick=field(object,'died_seconds')} end
     end
     providers.unit = function(id)
         local object = df.unit.find(id)
@@ -79,11 +81,16 @@ function game_providers()
             victim_histfig_id=victim.details and victim.details.histfig_id or hfid,
             year=object.event_year, tick=object.event_time,
             death_cause_id=object.death_cause,
+            death_cause=field(df.death_type,object.death_cause),
             site_reference=resolve('site', object.site).key}
     end
     providers.item = function(id)
         local object = df.item.find(id)
         if object then return {name=utf(dfhack.items.getDescription(object, 0, false))} end
+    end
+    providers.artifact = function(id)
+        local object = df.artifact_record.find(id)
+        if object then return {name=utf(dfhack.translation.translateName(object.name, true))} end
     end
     providers.material = function(mat_type, mat_index)
         local material = dfhack.matinfo.decode(mat_type, mat_index)

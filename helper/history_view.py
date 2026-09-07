@@ -9,9 +9,10 @@ from codex_batch import run_batch, generation_settings
 from process_queue import load_queue, load_results, write_results, repair_story_names
 from historian import HISTORIAN_CONTEXT, STORY_NOTICE, restore_reference_names
 from story_input import build_story_input, story_key, stable_json
+from story_coverage import CoverageError, validate as validate_coverage
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 12
+VIEW_SCHEMA_VERSION = 16
 
 
 def load_profile(directory, request):
@@ -165,6 +166,7 @@ def process_views(save):
                      timings={'queue_seconds': max(0, started_at - request.get('nonce', started_at)),
                               'generation_seconds': 0, 'cache_hit': False})
         state['attempts'] = previous.get('attempts', 0) if same_schema and previous.get('request') == request else 0
+        state['historical_event_coverage'] = (profile or {}).get('historical_events', {}).get('coverage', {})
         # Pages stay bounded even for long histories. Publish before model work.
         for page, offset in enumerate(range(0, len(events), 20)):
             lines = []
@@ -188,6 +190,11 @@ def process_views(save):
             write_results(output, state)
             continue
         if same_schema and previous.get('story_key') == semantic_key and previous.get('story'):
+            try:
+                state['story_coverage'] = validate_coverage(previous['story'], payload['required_event_coverage'])
+            except CoverageError:
+                state['story_key'] = None
+        if same_schema and state.get('story_key') == semantic_key and previous.get('story'):
             state['state'] = 'ready'
             state['story_revision'] = revision
             state['timings']['cache_hit'] = True
@@ -217,10 +224,15 @@ def complete_story(request_path, output, state, item, profile, semantic_key):
         result['text'] = restore_reference_names(result['text'], profile)
         if len(result['text'].encode('utf-8')) > 8000:
             raise ValueError('Generated story exceeds the display size limit.')
+        coverage = validate_coverage(result['text'], json.loads(item['raw']).get('required_event_coverage', []))
         state.update(state='ready', story=result['text'], story_revision=state['revision'],
                      story_explanation=result.get('explanation', ''),
                      story_notice=STORY_NOTICE, story_key=semantic_key,
-                     story_generation=state['generation'])
+                     story_generation=state['generation'], story_coverage=coverage)
+    except CoverageError as error:
+        # No hidden regeneration loop: keep the previous prose, visibly failed.
+        state.update(state='failed', error=str(error), attempts=3,
+                     retry_at=time.time()+300, error_kind='event_coverage')
     except Exception as error:
         state['attempts'] += 1
         state.update(state='failed', error=str(error)[-500:],
