@@ -32,10 +32,12 @@ function request(unit_id)
         return nil, 'could not create history request directory'
     end
     local nonce = os.time()
+    local request_data = {unit_id=unit_id, year=df.global.cur_year,
+        tick=df.global.cur_year_tick, nonce=nonce}
     local target = ('%s/%d.%d.%d.%d.request.json'):format(path, unit_id,
         df.global.cur_year, df.global.cur_year_tick, nonce)
     local existing = io.open(target, 'r')
-    if existing then existing:close(); return true end
+    if existing then existing:close(); return true, nil, request_data end
     -- Separate bounded profile from the tiny request/status protocol.
     local unit = df.unit.find(unit_id)
     local profile_name
@@ -54,11 +56,10 @@ function request(unit_id)
     end
     local file, err = io.open(target .. '.tmp', 'w')
     if not file then return nil, err end
-    local ok, write_error = file:write(json.encode({unit_id=unit_id,
-        year=df.global.cur_year, tick=df.global.cur_year_tick, nonce=nonce,
-        profile_file=profile_name}, {pretty=false}))
+    request_data.profile_file = profile_name
+    local ok, write_error = file:write(json.encode(request_data, {pretty=false}))
     file:close()
     if not ok then return nil, write_error end
     local renamed, rename_error = os.rename(target .. '.tmp', target)
-    return renamed, rename_error
+    return renamed, rename_error, request_data
 end

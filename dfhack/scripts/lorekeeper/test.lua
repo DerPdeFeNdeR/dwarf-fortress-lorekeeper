@@ -9,6 +9,7 @@ local translation = reqscript('lorekeeper/translation')
 local display_text = reqscript('lorekeeper/display_text')
 local profile = reqscript('lorekeeper/profile')
 local references = reqscript('lorekeeper/references')
+local reader_text = reqscript('lorekeeper/reader_text')
 
 local passed = 0
 
@@ -21,6 +22,28 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local reader_request={unit_id=7,year=102,tick=123,nonce=456}
+local reader_data={state='ready',request=reader_request,story='A quiet life.\n\nA lasting memory.',
+    record_count=50,event_count=34}
+assert_true(not reader_text.pending(reader_data,reader_request),
+    'reader recognizes the completed requested biography')
+assert_true(reader_text.pending(reader_data,{unit_id=7,year=102,tick=123,nonce=457}),
+    'reader distinguishes an older ready result from a pending update')
+assert_true(table.concat(reader_text.lines(reader_data,68),'\n')==reader_data.story,
+    'reader shows paragraphs without technical timeline data')
+reader_data.state='processing'
+assert_true(reader_text.status(reader_data,reader_request,true):find('previous version',1,true)~=nil and
+    reader_text.lines(reader_data,68)[1]=='A quiet life.',
+    'reader retains the previous story during generation')
+reader_data.state='failed'
+assert_true(reader_text.status(reader_data,reader_request,true):find('failed',1,true)~=nil and
+    reader_text.lines(reader_data,68)[1]=='A quiet life.',
+    'reader retains saved prose after failed generation')
+assert_true(reader_text.status(reader_data,reader_request,false):find('offline',1,true)~=nil,
+    'reader explains offline status without hiding saved biographies')
+assert_true(reader_text.status(nil,reader_request,true):find('preparing',1,true)~=nil and
+    table.concat(reader_text.lines(nil,68),' '):find('keep playing',1,true)~=nil,
+    'reader explains first-generation waiting without technical clutter')
 local overview = profile.quick_overview({status={}})
 assert_true(#overview == 2 and overview[1]:find('not a generated biography', 1, true) ~= nil,
     'shows an immediate factual fallback without requiring a model')

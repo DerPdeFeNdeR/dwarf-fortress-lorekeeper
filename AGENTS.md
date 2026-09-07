@@ -17,12 +17,19 @@
   earlier segments in the technical timeline. Technical gaps and resets belong
   outside the narrative; do not make them events in the dwarf's life.
 - Primary UX requirement: when the player navigates to/selects a dwarf in Dwarf Fortress, the tool should open a dedicated DFHack UI window showing a readable summary of that dwarf's thoughts, personality, and related mental state. Keep the vanilla screen intact. In-place replacement of vanilla text is a possible later experiment, not the initial target.
-- Next agreed milestone: a player-facing, story-first biography reader, separate
+- The player-facing reader is `lorekeeper/read`, separate
   from the technical `lorekeeper/history/show` view. Prioritize readable prose,
   a secondary interpretation notice, simple update/details/close controls, and
   automatic completion while keeping an older story readable. Build the reader
   before adding a selected-dwarf-screen entry button. Do not expose ticks, raw
   traits, or event counts by default in the player-facing reader.
+  U explicitly requests updated preparation; D toggles technical details without
+  requesting work, and N/P page those details. Escape closes the reader. Opening
+  captures the selected dwarf once; automatic polling does not recapture. The
+  player must close/select another dwarf/reopen to switch subjects for now.
+  The user approved the reader in-game on 2026-09-06; see
+  `docs/notes/biography-reader.md` for checks and remaining coverage limits.
+  The vanilla-screen entry button is the next separate milestone.
 - The user accepted Luna with low reasoning and its roughly 11-second measured
   generation time for now. Automatic in-game updates without R were verified.
   Further model comparisons, no-reasoning trials, and speculative biography
