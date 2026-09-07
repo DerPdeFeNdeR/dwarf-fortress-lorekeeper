@@ -2,6 +2,42 @@
 
 ## Current handoff
 
+- Latest Memoire speed batch is `qwen3-personal-v7`; read
+  `docs/notes/qwen-personal-briefs.md`. Compile supported personal facts after
+  knowledge filtering; retain unknown event semantics as structured data. Monthly
+  context selects relevant links/preferences and reachable references. Quiet
+  months target 60–100 words, busier months 100–180, introductions 80–140;
+  mandatory facts always outrank these editorial targets. Do not truncate prose
+  or weaken factual validation to hit a word target. Annual strategy is unchanged.
+
+- Latest Qwen rewrite is `qwen3-anchored-v6`: read
+  `docs/notes/qwen-writing-rewrite.md`. Monthly briefs exclude generated prose;
+  annual required factual sentences are assembled in Python with optional Qwen
+  reflections. One model call, immutable finished annual chapters. The anchored
+  path currently omits extra prose for optional events/atmosphere; literary quality
+  remains limited. Reflection scope checks are bounded, not semantic proof.
+  Reader D/retry track their exact request and select the requested draft.
+  Section comparisons remain opt-in experiments; no production section cache.
+
+- 2026-09-07: local Qwen3/Ollama and native Windows worker migration is in progress,
+  uncommitted. Read `docs/notes/windows-ollama.md` before switching workers.
+  Windows and WSL lock interoperability is not guaranteed; stop the old worker
+  before starting the other platform. Do not automatically register startup tasks.
+- Qwen coverage tuning is authorized: accept ordinary storytelling paraphrases
+  and bounded parenthetical transitions; style checks can be advisory. Keep
+  factual roles/dates/negation checks. See `docs/notes/qwen-coverage-and-gpu.md`.
+  Latest verified full GPU: Flash Attention + q4_0 KV cache at 20K context.
+  Preset v4 uses lossless evidence tables, fixed result cardinality, and disables
+  input truncation/context shifting. Preserve failures for inputs that exceed
+  capacity; never silently drop evidence. See `docs/notes/qwen-real-save-tuning.md`.
+  Heard-story checks also accept "I have heard" with all factual words retained.
+  Orphaned
+  Ollama llama-server children can retain VRAM after a server restart.
+- Native Windows cutover completed 2026-09-07: old WSL scheduled task disabled,
+  Windows Python worker active. Check heartbeat/processes before launching another.
+  No native autostart registered; startup after reboot is currently manual.
+  See HANDOFF.md for logs and checkpoint details. In-game Qwen acceptance pending.
+
 - Read `HANDOFF.md` when starting the next session. On 2026-09-06 the user requested
   first-person monthly memoires and personality-shaped annual dwarf narrators.
   This batch was published as `8dd7a66`; the user is playtesting. Check the
@@ -82,6 +118,14 @@
   pre-generation are deferred; do not silently enable them.
 
 ## Working assumptions
+
+- Writing strategies are model-owned. `helper/writer_settings.py` registers
+  `qwen3:8b` and `gpt-5.6-luna`; never let Luna use Qwen's personal brief or
+  anchored/compact Chronicle routes. Luna retains full-context writing in
+  `helper/luna_writing.py`. Register and test new models intentionally rather
+  than inheriting a strategy from their transport. Default profile is `qwen-fast`;
+  switch with `LOREKEEPER_WRITER_PROFILE` and restart the worker. See
+  `docs/notes/model-owned-writers.md` for profiles, tuning and validation.
 
 - Atmosphere is optional. The chronicle monitor samples central-cell weather
   every 120 game ticks, logging changes/daily checkpoints in shared branch/year

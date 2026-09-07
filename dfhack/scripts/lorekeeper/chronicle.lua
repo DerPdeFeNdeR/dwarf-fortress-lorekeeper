@@ -77,7 +77,7 @@ function retry(data)
     payload.retry_nonce=suffix
     local name=data.request_file:gsub('%.request%.json$','-retry-'..suffix..'.request.json')
     local ok,err=pcall(write_request,payload,name)
-    return ok,err
+    return ok,err,ok and {key=data.key,request_file=name} or nil
 end
 
 local function export_request(job)
@@ -115,7 +115,9 @@ local function export_request(job)
     runtime.sequence=runtime.sequence+1
     payload.nonce=tostring(os.time())..'-'..runtime.sequence
     local base=('%d-%s-%d-%s'):format(payload.site_id,payload.branch,payload.year,payload.kind)
-    write_request(payload,base..'-'..payload.nonce..'.request.json')
+    local filename=base..'-'..payload.nonce..'.request.json'
+    write_request(payload,filename)
+    job.request_file=filename
 end
 
 local function pump()
@@ -160,14 +162,23 @@ function draft()
     start()
     if not runtime then return nil,'Load a fortress first.' end
     for _,job in ipairs(runtime.pending) do
-        if job.kind=='draft' and job.year==df.global.cur_year then return true end
+        if job.kind=='draft' and job.year==df.global.cur_year then return true,nil,job end
     end
-    table.insert(runtime.pending,{year=df.global.cur_year,kind='draft'})
-    return true
+    local job={year=df.global.cur_year,kind='draft',
+        key=('%d-%s-%d-draft'):format(runtime.site_id,runtime.branch,df.global.cur_year)}
+    table.insert(runtime.pending,job)
+    return true,nil,job
 end
 
 dfhack.onStateChange['lorekeeper.chronicle']=function(change)
     if change==SC_MAP_UNLOADED or change==SC_WORLD_UNLOADED then stop() end
+end
+-- Rebind a cached monitor callback after a script reload without resetting the
+-- recording branch, narrator, pending jobs, or an in-flight capture coroutine.
+if runtime and timer then
+    dfhack.timeout_active(timer,nil)
+    timer=nil
+    start()
 end
 if dfhack_flags.module then return end
 start()

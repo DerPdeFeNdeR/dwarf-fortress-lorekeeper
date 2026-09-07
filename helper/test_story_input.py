@@ -1,6 +1,7 @@
 import copy
 import json
 import os
+from writer_settings import resolve_settings
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,17 +22,18 @@ class StoryInputTests(unittest.TestCase):
                 for nonce, name, effort in [(1, 'gpt-5.6-luna', 'low'),
                                              (2, 'gpt-5.6-luna', 'low'),
                                              (3, 'gpt-5.6-luna', 'medium'),
-                                             (4, 'gpt-6-astra', 'medium')]:
-                    with patch.dict(os.environ, LOREKEEPER_MODEL=name, LOREKEEPER_REASONING_EFFORT=effort):
+                                             (4, 'qwen3:8b', 'medium')]:
+                    profile = 'qwen-fast' if name == 'qwen3:8b' else 'luna-literary'
+                    with patch.dict(os.environ, LOREKEEPER_WRITER_PROFILE=profile, LOREKEEPER_REASONING_EFFORT=effort):
                         write_results(request_path, dict(unit_id=1, nonce=nonce))
                         process_views(save)
                         result = load_results(views / '1.json')
-                        self.assertEqual(result['story_generation'], dict(model=name, reasoning_effort=effort))
+                self.assertEqual(result['story_generation'], resolve_settings(dict(provider='ollama', model=name, reasoning_effort=effort)))
                 self.assertEqual(model.call_count, 3)
-                self.assertEqual(model.call_args.kwargs['settings']['model'], 'gpt-6-astra')
+                self.assertEqual(model.call_args.kwargs['settings']['model'], 'qwen3:8b')
                 process_views(save)  # Same completed request: no background regeneration.
                 self.assertEqual(model.call_count, 3)
-                with patch.dict(os.environ, LOREKEEPER_MODEL='gpt-6-astra', LOREKEEPER_REASONING_EFFORT='medium'):
+                with patch.dict(os.environ, LOREKEEPER_WRITER_PROFILE='qwen-fast', LOREKEEPER_REASONING_EFFORT='medium'):
                     with patch('history_view.HISTORIAN_CONTEXT', 'Updated historian rules'):
                         write_results(request_path, dict(unit_id=1, nonce=5))
                         process_views(save)

@@ -64,10 +64,13 @@ def requirements(events):
         clauses = [[f'{teller} {verb}' for verb in ('told a story about',
                     'recounted a tale about', 'told a tale of', 'recounted the story of',
                     'told the story of', 'recounted a story about', 'related a tale of',
-                    'told a story of', 'later told a story about')]] + office_clauses(topic, topic_clause)
+                    'told a story of', 'later told a story about',
+                    'followed with a tale of', 'followed with a story about',
+                    'shared a tale of', 'shared a story about',
+                    'recounted how', 'told of')]] + office_clauses(topic, topic_clause)
         if dated:
             years = [str(year)] + ([SMALL_YEARS[year]] if year < len(SMALL_YEARS) else [])
             clauses.append([f'{prefix} {value}' for value in years for prefix in ('year','in','of')])
         required.append(dict(event_id=event['source_key'],kind='storytelling',
-                             sentence=sentence,clauses=clauses))
+                             sentence=sentence,clauses=clauses,teller=teller))
     return required

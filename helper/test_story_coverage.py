@@ -18,6 +18,16 @@ def death():
 
 
 class CoverageTests(unittest.TestCase):
+    def test_heard_story_perfect_tense_keeps_all_factual_words(self):
+        row = dict(event_id='heard:1', kind='heard_story', sentence=
+            'I heard with interest a story from Kûbuk about Minkot becoming baron in year 80.')
+        text = row['sentence'].replace('I heard', 'I have heard')
+        validate(text, [row])
+        for old, new in [('have heard', 'have not heard'), ('Kûbuk', 'Urist'),
+                         ('80', '81'), ('interest', 'horror')]:
+            with self.subTest(new=new), self.assertRaises(CoverageError):
+                validate(text.replace(old, new), [row])
+
     def test_killing_anchor_preserves_responsibility_without_intent(self):
         rows=requirements({'events':[death()]})
         self.assertEqual(rows[0]['sentence'],

@@ -73,6 +73,10 @@ def main() -> None:
     args = parser.parse_args()
     if args.interval <= 0:
         parser.error("--interval must be positive")
+    from writer_settings import generation_settings
+    settings = generation_settings()
+    print(f"Lorekeeper: writer {settings['provider']} / {settings['model']}; "
+          f"Memoire={settings['strategies']['memoire']}, Chronicle={settings['strategies']['chronicle']}.", flush=True)
 
     if args.once:
         for save in sorted(args.save_directory.iterdir()):

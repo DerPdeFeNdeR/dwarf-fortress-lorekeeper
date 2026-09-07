@@ -8,7 +8,7 @@ import json
 import os
 import tempfile
 import warnings
-import fcntl
+from file_lock import acquire
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +87,7 @@ def repair_story_names(items: list[dict[str, Any]], results: list[dict[str, Any]
 def process_queue(queue_path: Path, result_path: Path) -> int:
     result_path.parent.mkdir(parents=True, exist_ok=True)
     with result_path.with_suffix('.lock').open('a') as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        acquire(lock)
         return _process_queue(queue_path, result_path)
 
 

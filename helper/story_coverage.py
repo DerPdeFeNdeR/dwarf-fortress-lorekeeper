@@ -100,11 +100,25 @@ def validate(text, required, label='Memoire'):
 def covered(text, prose, row):
     clauses = row.get('clauses')
     if not clauses:
-        return normalized(row['sentence']) in prose
+        sentence = normalized(row['sentence'])
+        alternatives = [sentence]
+        if row.get('kind') == 'heard_story' and sentence.startswith('I heard '):
+            alternatives.append('I have heard ' + sentence[len('I heard '):])
+        return any(alternative in prose for alternative in alternatives)
     # Keep roles/actions ordered and nearby in ONE paragraph. Independent name
     # mentions elsewhere are not coverage of who did what to whom.
-    parts = ['(?:' + '|'.join(re.escape(normalized(choice)) for choice in choices) + ')'
-             for choices in clauses]
+    parts = []
+    for index, choices in enumerate(clauses):
+        alternatives = []
+        for choice in choices:
+            value = re.escape(normalized(choice))
+            teller = row.get('teller') if row.get('kind') == 'storytelling' else None
+            if index == 0 and teller and choice.startswith(teller + ' '):
+                # A parenthetical transition does not change the storyteller.
+                prefix = re.escape(normalized(teller))
+                value = prefix + r'(?:,\s*(?:too|in turn|meanwhile),)?' + value[len(prefix):]
+            alternatives.append(value)
+        parts.append('(?:' + '|'.join(alternatives) + ')')
     pattern = parts[0]
     for index, part in enumerate(parts[1:]):
         pattern += f'(?P<gap{index}>[^.!?]{{0,240}}?)' + part

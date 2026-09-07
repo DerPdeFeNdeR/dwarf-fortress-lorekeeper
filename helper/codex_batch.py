@@ -1,180 +1,92 @@
 #!/usr/bin/env python3
-"""Run one efficient, structured translation batch through Codex CLI."""
-
-from __future__ import annotations
-
+"""Compatibility entry point: prepare a strategy, call a model, validate the envelope."""
 import argparse
 import json
-import subprocess
-import os
-import signal
-import tempfile
 from pathlib import Path
-from typing import Any, Callable
 
+from model_adapters import select_adapter, run_process
+from writer_settings import generation_settings, resolve_settings
+from writing_strategies import prepare, decode, literary_prompt
 
 MAX_BATCH_SIZE = 50
-PROMPT_VERSION = "1"
-DEFAULT_MODEL = "gpt-5.6-luna"
-DEFAULT_REASONING_EFFORT = "low"
+PROMPT_VERSION = '1'
 
 
-def generation_settings() -> dict[str, str]:
-    """Keep the game worker independent of interactive Codex model defaults."""
-    model = os.environ.get('LOREKEEPER_MODEL', DEFAULT_MODEL).strip()
-    effort = os.environ.get('LOREKEEPER_REASONING_EFFORT', DEFAULT_REASONING_EFFORT).strip()
-    if not model:
-        raise ValueError('LOREKEEPER_MODEL must not be empty')
-    if effort not in {'none', 'low', 'medium', 'high', 'xhigh', 'max'}:
-        raise ValueError('Invalid LOREKEEPER_REASONING_EFFORT')
-    return dict(model=model, reasoning_effort=effort)
-
-
-def run_process(command, *, input, timeout, encoding, **_options):
-    with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, text=True, encoding=encoding,
-                          start_new_session=True) as process:
-        try:
-            stdout, stderr = process.communicate(input, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            os.killpg(process.pid, signal.SIGKILL)
-            process.communicate()
-            raise RuntimeError('Model generation exceeded its time limit.')
-        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
-
-
-def normalize_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Drop duplicate work while preserving the first item's order."""
-    normalized = []
-    seen = set()
+def normalize_items(items):
+    normalized, seen = [], set()
     for item in items:
         if not isinstance(item, dict):
-            raise ValueError("each batch item must be an object")
-        item_id = item.get("id")
-        kind = item.get("kind")
-        raw = item.get("raw")
-        if not all(isinstance(value, str) and value for value in (item_id, kind, raw)):
-            raise ValueError("each batch item needs non-empty id, kind, and raw fields")
-        key = json.dumps(
-            {
-                "kind": kind,
-                "raw": raw,
-                "context": item.get("context", ""),
-                "language": item.get("language", "en"),
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        )
+            raise ValueError('each batch item must be an object')
+        if not all(isinstance(item.get(key), str) and item[key] for key in ('id', 'kind', 'raw')):
+            raise ValueError('each batch item needs non-empty id, kind, and raw fields')
+        key = json.dumps({key: item.get(key, 'en' if key == 'language' else '')
+                          for key in ('kind', 'raw', 'context', 'language')}, sort_keys=True)
         if key not in seen:
-            seen.add(key)
-            normalized.append(item)
-
+            seen.add(key); normalized.append(item)
     if len(normalized) > MAX_BATCH_SIZE:
-        raise ValueError(f"batch exceeds the {MAX_BATCH_SIZE}-item limit")
+        raise ValueError(f'batch exceeds the {MAX_BATCH_SIZE}-item limit')
     return normalized
 
 
-def build_prompt(items: list[dict[str, Any]]) -> str:
-    return (
-        "Process the following Lorekeeper translation batch. Use only the supplied "
-        "raw values and context. Do not inspect, edit, or create files. Do not invent "
-        "game events or facts. Return one result for every item, preserving each id. "
-        "Follow each item's requested text length and coverage; keep explanation concise.\n\n"
-        + json.dumps(items, ensure_ascii=False, sort_keys=True, indent=2)
-    )
+def build_prompt(items):
+    return literary_prompt(items)
 
 
-def validate_results(items: list[dict[str, Any]], response: dict[str, Any]) -> dict[str, Any]:
-    results = response.get("results")
+def build_ollama_prompt(items):
+    """Compatibility for old diagnostics; new callers should use prepare_batch."""
+    return prepare_batch(items, resolve_settings({'provider': 'ollama'})).prompt
+
+
+def prepare_batch(items, settings=None):
+    return prepare(normalize_items(items), resolve_settings(settings) if settings is not None else generation_settings())
+
+
+def validate_results(items, response):
+    if not isinstance(response, dict):
+        raise ValueError('Model response must be an object')
+    results = response.get('results')
     if not isinstance(results, list) or len(results) != len(items):
-        raise ValueError("Codex result count does not match the request count")
-
-    expected_ids = [item["id"] for item in items]
-    actual_ids = [result.get("id") for result in results]
-    if actual_ids != expected_ids:
-        raise ValueError("Codex results must preserve request order and ids")
-
-    required = ("id", "text", "explanation", "category", "confidence")
+        raise ValueError('Model result count does not match the request count')
+    if not all(isinstance(result, dict) for result in results):
+        raise ValueError('Model results must be objects')
+    if [result.get('id') for result in results] != [item['id'] for item in items]:
+        raise ValueError('Model results must preserve request order and ids')
     for result in results:
-        if not all(isinstance(result.get(field), str) and result[field] for field in required):
-            raise ValueError("Codex returned an incomplete translation result")
-        if result["confidence"] not in {"high", "medium", "low"}:
-            raise ValueError("Codex returned an invalid confidence value")
-
-    return {
-        "schema_version": 1,
-        "source": "codex-cli",
-        "prompt_version": PROMPT_VERSION,
-        "results": results,
-    }
+        if not all(isinstance(result.get(field), str) and result[field]
+                   for field in ('id', 'text', 'explanation', 'category', 'confidence')):
+            raise ValueError('Model returned an incomplete translation result')
+        if result['confidence'] not in {'high', 'medium', 'low'}:
+            raise ValueError('Model returned an invalid confidence value')
+    return dict(schema_version=1, source='codex-cli', prompt_version=PROMPT_VERSION, results=results)
 
 
-def run_batch(
-    items: list[dict[str, Any]],
-    codex_command: str = "codex",
-    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
-    *, settings: dict[str, str] | None = None,
-) -> dict[str, Any]:
+def run_batch(items, codex_command='codex', runner=None, *, settings=None, adapter=None):
     items = normalize_items(items)
     if not items:
-        return {"schema_version": 1, "source": "codex-cli", "prompt_version": PROMPT_VERSION, "results": []}
-
-    runner = runner or run_process
-    settings = settings or generation_settings()
-    schema_path = Path(__file__).with_name("codex_batch_schema.json")
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as output_file:
-        output_path = Path(output_file.name)
-
-    command = [
-        codex_command,
-        "exec",
-        "--model", settings['model'],
-        "-c", 'model_reasoning_effort=' + json.dumps(settings['reasoning_effort']),
-        "--ephemeral",
-        "--sandbox",
-        "read-only",
-        "--output-schema",
-        str(schema_path),
-        "-o",
-        str(output_path),
-        "Translate the supplied Lorekeeper batch and return only the requested structured results.",
-    ]
-    try:
-        completed = runner(
-            command,
-            input=build_prompt(items),
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=180,
-            encoding='utf-8',
-        )
-        if completed.returncode != 0:
-            detail = (completed.stderr or completed.stdout or "Codex exited unsuccessfully").strip()
-            raise RuntimeError(f"codex exec failed: {detail[-1000:]}")
-        try:
-            response = json.loads(output_path.read_text(encoding="utf-8"))
-        except (FileNotFoundError, json.JSONDecodeError) as exc:
-            raise RuntimeError("codex exec did not produce valid structured output") from exc
-        result = validate_results(items, response)
-        result['generation'] = dict(settings)
-        return result
-    finally:
-        output_path.unlink(missing_ok=True)
+        return dict(schema_version=1, source='codex-cli', prompt_version=PROMPT_VERSION, results=[])
+    settings = resolve_settings(settings) if settings is not None else generation_settings()
+    prepared = prepare(items, settings)
+    adapter = adapter or select_adapter(settings['provider'], codex_command=codex_command, runner=runner)
+    generated = adapter.generate(prompt=prepared.prompt, schema=prepared.schema, settings=settings)
+    response, diagnostics = decode(prepared, items, generated.payload)
+    result = validate_results(items, response)
+    result.update(source=settings['provider'], generation=settings,
+                  writing=prepared.provenance(), model_metrics=generated.metrics)
+    if diagnostics is not None:
+        result['writing_diagnostics'] = diagnostics
+    return result
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("input", type=Path, help="JSON file containing a translation array")
-    parser.add_argument("output", type=Path, help="JSON file to write structured results to")
+    parser.add_argument('input', type=Path)
+    parser.add_argument('output', type=Path)
     args = parser.parse_args()
-
-    items = json.loads(args.input.read_text(encoding="utf-8"))
+    items = json.loads(args.input.read_text(encoding='utf-8'))
     if not isinstance(items, list):
-        raise SystemExit("input must contain a JSON array")
-    result = run_batch(items)
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        raise SystemExit('input must contain a JSON array')
+    args.output.write_text(json.dumps(run_batch(items), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

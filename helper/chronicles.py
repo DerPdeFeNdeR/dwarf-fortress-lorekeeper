@@ -4,7 +4,7 @@ import json
 import re
 import time
 
-from codex_batch import run_batch, generation_settings
+from codex_batch import run_batch, generation_settings, prepare_batch
 from historical_episodes import SUPPORTED
 from historian import STORY_NOTICE
 from process_queue import load_results, write_results
@@ -61,6 +61,8 @@ example, NOT mandatory wording or a sentence-opening template. Date the local
 event using its supplied month context, which may cover several events. Preserve
 the clauses' named roles and actions, but choose punctuation and connective prose
 freely. Include all deaths, including those without a named slayer or known month.
+Ordinary storytelling transitions such as 'followed with a tale of' and
+parentheticals such as 'Doren, too, recounted' are acceptable.
 Treat artifact naming as naming, not creation. Do not infer a strange mood
 unless an explicit mood event supports it. Use chronology and contrasting
 developments to organize the chapter, not a roster of events or citizens.
@@ -297,15 +299,19 @@ def process_chronicles(save):
                    request_digest=digest,updated_at=time.time(),coverage=request.get('coverage',{}),
                    story=previous.get('story'),notice=STORY_NOTICE,source=request.get('source',{}),
                    request_file=path.name,narrator=request.get('narrator'),
+                   generation=previous.get('generation'),writing=previous.get('writing'),
+                   model_metrics=previous.get('model_metrics'),
                    story_narrator=previous.get('story_narrator'))
         write_results(output,state); publish_catalog(directory)
         started=time.perf_counter()
         try:
             if payload['events'] or payload['cultural_events']:
                 settings=generation_settings()
+                state['requested_generation']=settings
                 item=dict(id=key,kind='fortress_year',raw=json.dumps(payload,ensure_ascii=False),
                           context=CHRONICLE_CONTEXT)
-                result=run_batch([item],settings=settings)['results'][0]
+                batch=run_batch([item],settings=settings)
+                result=batch['results'][0]
                 text=result['text']
                 if len(text.encode('utf-8'))>16000: raise ValueError('Annual chapter exceeds display limit')
                 try:
@@ -318,7 +324,7 @@ def process_chronicles(save):
                             missing_event_ids=error.missing_event_ids,
                             required_event_coverage=payload['required_event_coverage'],
                             request_file=path.name,request_digest=digest,
-                            prompt_digest=hashlib.sha256(CHRONICLE_CONTEXT.encode()).hexdigest(),
+                            prompt_digest=hashlib.sha256(prepare_batch([item],settings).prompt.encode()).hexdigest(),
                             generation=settings,created_at=time.time())
                         write_results(directory/rejected_file,rejected)
                         state['rejected_draft_file']=rejected_file
@@ -333,6 +339,8 @@ def process_chronicles(save):
                         state['correction_error']=str(correction_error)[-500:]
                         raise error
                 state.update(story=text,generation=settings,story_coverage=coverage,
+                             writing_diagnostics=batch.get('writing_diagnostics'),
+                             writing=batch.get('writing'),model_metrics=batch.get('model_metrics'),
                              story_narrator=request.get('narrator'))
             else:
                 state.update(story='',empty=True)

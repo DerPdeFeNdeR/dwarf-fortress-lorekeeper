@@ -1,5 +1,5 @@
 """Single-worker ownership and heartbeat independent of model execution."""
-import fcntl
+from file_lock import acquire
 import os
 import threading
 import time
@@ -12,7 +12,7 @@ def worker_runtime(save_directory):
     stop = threading.Event()
     lock = (save_directory / '.lorekeeper-worker.lock').open('a')
     try:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        acquire(lock)
     except BlockingIOError:
         lock.close()
         raise RuntimeError('A Lorekeeper watcher already owns this save directory.')

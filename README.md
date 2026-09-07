@@ -13,19 +13,67 @@ The aim is lively, sometimes funny, sometimes somber narration grounded in the g
 
 This is a **developer playtest**, not a one-click Workshop release or an exhaustive history recorder. **Back up your saves before testing.**
 
+## Player setup (Windows)
+
+You do not need to be a programmer to try Lorekeeper, but this is still an
+early playtest. Install Steam Dwarf Fortress, DFHack, and [Ollama](https://ollama.com/download/windows).
+Download or clone this repository into a folder you can find, such as
+`C:\Users\YOUR_NAME\Lorekeeper`. In PowerShell, download the local writer once:
+
+Install [Python 3.13 for Windows](https://www.python.org/downloads/windows/) if
+the `python` command is not already available.
+
+```powershell
+ollama pull qwen3:8b
+```
+
+Start Ollama and leave it running. In the Dwarf Fortress folder, edit
+`dfhack-config\script-paths.txt` and add the full path to this checkout's
+`dfhack\scripts` folder, for example:
+
+```text
++C:\Users\YOUR_NAME\Lorekeeper\dfhack\scripts
+```
+
+Then edit `dfhack-config\init\dfhack.init` and add:
+
+```text
+lorekeeper/autostart
+```
+
+Restart Dwarf Fortress after changing those two files. Open a fortress and start
+the native worker from PowerShell in the checkout:
+
+```powershell
+.\helper\start_watcher.ps1 -Python python
+```
+
+Leave that window open while you play. Load a fortress, select a dwarf, and
+press **Ctrl+L** (or click **Read Memoire**) to open the reader. Press **U** to
+request an update. For fortress-wide stories, run `lorekeeper/chronicles` from
+the DFHack launcher and press **D**. The first request can take a little while;
+the game remains playable while the worker writes in the background.
+
+To stop the worker, focus its PowerShell window and press Ctrl+C. Run only one
+worker for a save directory. Keep regular backups of your save files. If the
+reader says the worker is unavailable, confirm Ollama is running and that the
+PowerShell window reports `writer ollama / qwen3:8b`. The optional Codex/Luna
+setup below is for developers; it is not required for the Qwen playtest.
+
 ## How it works
 
 | Component | Runs where | Responsibility |
 | --- | --- | --- |
 | DFHack Lua scripts | Windows game | Bounded collection, on-demand profiles, overlays and readers |
-| Save-directory watcher | WSL | Prepare timelines, invoke Codex, validate/cache stories |
-| Codex CLI | Same WSL user | Authenticated model generation outside the game loop |
+| Save-directory watcher | Windows or WSL | Prepare timelines, invoke the selected model, validate/cache stories |
+| Ollama (default) | Windows | Local Qwen generation outside the game loop |
+| Codex CLI (optional) | Same environment as watcher | Authenticated Luna generation outside the game loop |
 
-There are **two separate startup mechanisms**: DFHack starts collection on fortress load; an optional Windows logon task starts the WSL watcher. The watcher does **not** currently launch with DFHack. Once both run, reading and updates happen entirely in-game—no manual queue processing.
+There are **two separate startup mechanisms**: DFHack starts collection on fortress load; you start the watcher separately (manually or with an optional task). The watcher does **not** currently launch with DFHack. Once both run, reading and updates happen entirely in-game—no manual queue processing.
 
 ## Windows developer installation
 
-Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, WSL, Python **3.14.4**. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The watcher uses POSIX locking/process handling: **run it in WSL, not Windows Python**.
+Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**, and WSL for optional Codex testing. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended Qwen setup; WSL remains supported for Codex/Luna.
 
 You need Codex sign-in and access to the configured model. The worker currently defaults to **`gpt-5.6-luna` / `low` reasoning**, verified on the development account—not guaranteed for every account. Generation uses your account's limits. ChatGPT-backed Codex login and API-key billing are separate paths; the documented ChatGPT workflow does not require an API key. See [official authentication guidance](https://learn.chatgpt.com/docs/auth).
 
@@ -84,7 +132,24 @@ python3 --version
 
 Do not clone a second copy in PowerShell. No compiled plugin, Python packages, HTTP API server, or web server are needed for this workflow.
 
-### 3. Install and sign in to Codex inside WSL
+### 3. Install Ollama and download the local model
+
+For the native Windows worker currently under validation, see
+[native Windows startup](helper/README.md#native-windows-startup-ollama).
+The WSL and native workers must never run against the same save root together.
+
+Install Ollama for Windows, start it, and download the model:
+
+```powershell
+ollama pull qwen3:8b
+```
+
+The watcher uses Ollama at `http://127.0.0.1:11434` by default. It sends
+schema-constrained JSON, disables Qwen thinking for latency, and keeps the model
+loaded between requests. See [worker configuration](helper/README.md#configuration)
+for provider settings and the optional hosted fallback.
+
+### Optional: use the Codex provider instead
 
 Use the **same WSL user** that will run the watcher. Follow the [official Codex CLI installation instructions](https://learn.chatgpt.com/docs/codex/cli). The documented Linux installer is:
 

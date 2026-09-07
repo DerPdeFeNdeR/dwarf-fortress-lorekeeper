@@ -14,6 +14,7 @@ integration boundary, data format, model behavior, or user experience.
 - [006: Annual Chronicles](0006-annual-fortress-chronicles.md)
 - [007: Dwarf narrators](0007-dwarf-narrators.md)
 - [008: Observed atmosphere](0008-observed-atmosphere.md)
+- [009: Model-owned writing strategies](0009-model-owned-writing-strategies.md)
 
 Decisions preserve their original context. Use the [current setup guide](../../README.md)
 and [contracts](../schema.md) for operational instructions and schema versions.

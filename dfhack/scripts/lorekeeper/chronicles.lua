@@ -4,6 +4,7 @@ local widgets=require('gui.widgets')
 local chronicle=reqscript('lorekeeper/chronicle')
 local display=reqscript('lorekeeper/display_text')
 local requests=reqscript('lorekeeper/view_request')
+local progress=reqscript('lorekeeper/chronicle_progress')
 
 ChroniclesWindow=defclass(ChroniclesWindow,widgets.Window)
 ChroniclesWindow.ATTRS{frame_title='The Lorekeeper: Fortress Chronicles',frame={w=86,h=36}}
@@ -17,20 +18,24 @@ function ChroniclesWindow:init()
             text_pen=COLOR_WHITE,cursor_pen=COLOR_WHITE,text_hpen=COLOR_WHITE},
         widgets.Label{frame={b=3,l=1},text='Based on game events, with imagined motives and interpretation.',text_pen=COLOR_DARKGREY},
         widgets.HotkeyLabel{view_id='draft',frame={b=1,l=1,w=24},key='CUSTOM_D',label='Year so far',on_activate=function()
-            local ok,err=chronicle.draft(); self.message=ok and 'Draft requested; preparation runs in the background.' or err
+            local ok,err,job=chronicle.draft()
+            self.message=err
+            if ok then self.pending_draft=job; self.selected=job.key end
             self:refresh(true)
         end},
         widgets.HotkeyLabel{view_id='retry',frame={b=1,l=28,w=26},key='CUSTOM_R',label='Retry failed chapter',
             enabled=function() return self.data and self.data.state=='failed' end,
             on_activate=function()
-                local ok,err=chronicle.retry(self.data)
-                self.message=ok and 'Retry requested.' or err; self:refresh(true)
+                local ok,err,job=chronicle.retry(self.data)
+                self.message=err
+                if ok then self.pending_draft=job; self.selected=job.key end
+                self:refresh(true)
             end},
         widgets.HotkeyLabel{view_id='previous',frame={b=0,l=1,w=24},key='CUSTOM_P',label='Previous chapter',on_activate=function()
-            self.page=math.max(1,self.page-1); self.selected=nil; self:refresh(true)
+            self.page=math.max(1,self.page-1); self.selected=nil; self.pending_draft=nil; self.message=nil; self:refresh(true)
         end},
         widgets.HotkeyLabel{view_id='next',frame={b=0,l=28,w=26},key='CUSTOM_N',label='Next chapter',on_activate=function()
-            self.page=math.min(#(self.chapters or {}),self.page+1); self.selected=nil; self:refresh(true)
+            self.page=math.min(#(self.chapters or {}),self.page+1); self.selected=nil; self.pending_draft=nil; self.message=nil; self:refresh(true)
         end},
         widgets.HotkeyLabel{view_id='close',frame={b=1,r=1,w=12},key='LEAVESCREEN',label='Close',on_activate=function() self.parent_view:dismiss() end},
     }
@@ -55,10 +60,13 @@ function ChroniclesWindow:refresh(force)
     local entry=self.chapters[self.page]
     local data=entry and chronicle.read_file(entry.key..'.chapter.json',65536)
     self.data=data
+    local pending_message=progress.message(self.pending_draft,data)
+    if self.pending_draft and not pending_message then self.pending_draft=nil; self.message=nil end
     local worker_available=requests.worker_available()
-    local signature=tostring(data and data.updated_at)..tostring(entry and entry.key)..tostring(self.message)..tostring(chronicle.last_error)..tostring(worker_available)
+    local signature=tostring(data and data.updated_at)..tostring(entry and entry.key)..tostring(self.message)..tostring(pending_message)..tostring(chronicle.last_error)..tostring(worker_available)
     if not force and signature==self.signature then return end
-    self.signature=signature; self.selected=entry and entry.key
+    self.signature=signature
+    self.selected=self.pending_draft and self.pending_draft.key or (entry and entry.key)
     local heading='Fortress Chronicles'
     local status=self.message or 'Finished chapters are written automatically after each year ends.'
     local body='Choose Year so far for a draft. You can close this window while the historian writes.'
@@ -83,6 +91,7 @@ function ChroniclesWindow:refresh(force)
             body='No eligible dwarf narrator was available; external chronicler.\n\n'..body
         end
     end
+    status=pending_message or self.message or status
     if catalog.older_archived then status=status..' Showing the newest 100 chapters; older files remain archived.' end
     if not worker_available then status='Historian offline. Saved chapters remain readable.' end
     if chronicle.last_error then status='Chapter preparation failed: '..chronicle.last_error end

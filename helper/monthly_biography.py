@@ -258,7 +258,8 @@ def process(directory, state, payload, records, profile, generate):
     state['timings']['payload_bytes'] = len(item['raw'].encode())
     write_results(directory / f'{unit}.json', state)
     start = time.perf_counter()
-    result = generate([item], settings=state['generation'])['results'][0]
+    batch = generate([item], settings=state['generation'])
+    result = batch['results'][0]
     repair_story_names([item], [result])
     text = chapter_text(key, restore_reference_names(result['text'], profile))
     if not text or len(text.encode()) > 8000:
@@ -266,6 +267,7 @@ def process(directory, state, payload, records, profile, generate):
     coverage = validate(text, required)
     document = dict(title=title(key), key=key, evidence_digest=digest(evidence),
                     text=text, coverage=coverage, generation=state['generation'])
+    document.update(writing=batch.get('writing'), model_metrics=batch.get('model_metrics'))
     filename = f'{unit}.monthly.{digest(document)}.json'
     write_results(directory / filename, document)
     chapter.update(file=filename, written=copy.deepcopy(evidence), context=context, writer=writer)
