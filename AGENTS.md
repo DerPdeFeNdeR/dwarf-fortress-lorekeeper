@@ -218,6 +218,31 @@
 
 ## Coding and review standard
 
+### Annual fortress chronicles
+
+- `lorekeeper/chronicle` is the bounded annual monitor, started by the existing
+  `lorekeeper/autostart` hook. `lorekeeper/chronicles` is its separate reader and
+  the fortress overlay button opens it without requiring a selected dwarf.
+- Queue a finished year only after observing calendar rollover. Generate through
+  the external save watcher, never from the game thread. Current-year drafts are
+  explicitly requested with D; N/P browse, R retries failures. Published finished
+  chapters are immutable; draft updates cannot overwrite them.
+- Annual evidence uses explicit site associations in the historical-event index,
+  with bounded current/previous-year buckets (256 each), selecting at most 16
+  events. Resolve one event per frame, up to 256 reference lookups and 128 KiB
+  request files. This is supported, selected evidence, not exhaustive fort history.
+- Every fortress load and observed backward-time transition starts a new recording
+  branch. Preserve earlier files; do not merge incompatible histories or turn gaps
+  into fictional events. Coverage warnings and branch labels belong outside prose.
+- Files live under the save's `lorekeeper-chronicles/`; the reader reads bounded
+  prepared files, never logs. The catalog shows the newest 100 chapters, retaining
+  older files on disk. See `docs/notes/annual-chronicles.md` for validation limits.
+- 2026-09-06 playtest handoff: the user verified the five separate footer controls
+  and overlay placement x=6, y=10, approved publication, and will play normally to
+  collect bugs/improvements. Natural year-end generation remains unverified live
+  despite automated rollover tests. Review playtest feedback before new features;
+  preserve this caveat until an actual year transition has been observed.
+
 Apply Bob Martin's Clean Code principles whenever writing or reviewing code, while using judgment appropriate to this project's Lua and game-integration constraints:
 
 - Prefer clear, intention-revealing names over comments that explain vague code.

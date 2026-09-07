@@ -66,7 +66,8 @@ function normalize(event, token)
     local spec = specs[token]
     if not spec then return end
     local row = {id=event.id, kind=spec.kind, year=event.year, tick=event.seconds,
-        site_id=field(event,spec.site or 'site'), participants={}}
+        site_id=field(event,spec.site or 'site'),
+        location_role=spec.site and 'destination' or 'event_site',participants={}}
     for name in pairs(enum_fields[spec.kind] or {}) do row[name..'_id']=field(event,name) end
     if spec.kind=='entity_link_added' or spec.kind=='entity_link_removed' then
         row.entity_id=field(event,'civ')
@@ -111,8 +112,23 @@ function normalize(event, token)
 end
 
 function new_index(limit)
-    local index={version=4,by_figure={}, slots={},next_slot=1,links=0, limit=limit or 50000, truncated=false,
+    local index={version=5,by_figure={}, site_years={},site_truncated={},slots={},next_slot=1,links=0, limit=limit or 50000, truncated=false,
         scanned=0, errors=0}
+    function index:add_site(row,site_id,current_year)
+        if row.site_id~=site_id or row.year<current_year-1 or row.year>current_year then return end
+        local bucket=self.site_years[row.year] or {}
+        self.site_years[row.year]=bucket
+        if #bucket>=256 then
+            self.site_truncated[row.year]=true
+            local lowest=1
+            for i=2,#bucket do
+                if importance(bucket[i])<importance(bucket[lowest]) then lowest=i end
+            end
+            if importance(row)<importance(bucket[lowest]) then return end
+            table.remove(bucket,lowest)
+        end
+        table.insert(bucket,row)
+    end
     function index:remove_link(hfid,event_id)
         local bucket=self.by_figure[hfid] or {}
         for i,row in ipairs(bucket) do
@@ -191,11 +207,17 @@ local function pump()
             return normalize(event,df.history_event_type[event:getType()])
         end)
         if not ok then state.errors=state.errors+1
-        elseif row then state:add(row) end
+        elseif row then
+            state:add(row)
+            state:add_site(row,df.global.plotinfo.site_id,df.global.cur_year)
+        end
         state.scanned=state.scanned+1
         count=count+1
     end
     state.total=#events
+    for year in pairs(state.site_years) do
+        if year<df.global.cur_year-1 then state.site_years[year]=nil; state.site_truncated[year]=nil end
+    end
     state.last_batch_ms=(os.clock()-started)*1000
     state.max_batch_ms=math.max(state.max_batch_ms or 0,state.last_batch_ms)
     timer=dfhack.timeout(state.scanned<#events and 1 or 100,'frames',pump)
@@ -205,6 +227,42 @@ function start()
     if not dfhack.isMapLoaded() then return end
     if timer and dfhack.timeout_active(timer) then return end
     timer=dfhack.timeout(1,'frames',pump)
+end
+
+function enrich(source,resolver,hfid)
+    local row={}
+    for key,value in pairs(source) do if key~='participants' then row[key]=value end end
+    row.participants={}
+    for j,p in ipairs(source.participants) do
+        if j>8 then row.participants_truncated=true; break end
+        local ref=resolver:resolve('historical_figure',p.histfig_id)
+        table.insert(row.participants,{histfig_id=p.histfig_id,role=p.role,
+            name=ref.details and ref.details.name,reference_status=ref.status})
+    end
+    row.subject_roles={}
+    for _,p in ipairs(source.participants) do
+        if p.histfig_id==hfid then table.insert(row.subject_roles,p.role) end
+    end
+    local site=resolver:resolve('site',source.site_id)
+    row.site_name=site.details and site.details.name
+    if source.artifact_id then
+        local artifact=resolver:resolve('artifact',source.artifact_id)
+        row.artifact_name=artifact.details and artifact.details.name
+        row.artifact_status=artifact.status
+    end
+    if source.death_cause_id then row.death_cause=field(df.death_type,source.death_cause_id) end
+    if source.subtype_id then row.subtype=field(df.history_event_simple_battle_subtype,source.subtype_id) end
+    for name,enum in pairs(enum_fields[source.kind] or {}) do row[name]=field(df[enum],source[name..'_id']) end
+    if source.entity_id then
+        local entity=resolver:resolve('entity',source.entity_id)
+        row.entity_name=entity.details and entity.details.name
+    end
+    if source.item_id then
+        local item=resolver:resolve('item',source.item_id)
+        row.item_name=item.details and item.details.name
+        row.item_status=item.status
+    end
+    return row
 end
 
 function capture(hfid, resolver)
@@ -219,42 +277,7 @@ function capture(hfid, resolver)
     coverage.subject_events=#bucket
     coverage.subject_truncated=#bucket>8
     for _,source in ipairs(select_events(bucket,8)) do
-        local row={}
-        for key,value in pairs(source) do if key~='participants' then row[key]=value end end
-        row.participants={}
-        for j,p in ipairs(source.participants) do
-            if j>8 then row.participants_truncated=true; break end
-            local ref=resolver:resolve('historical_figure',p.histfig_id)
-            table.insert(row.participants,{histfig_id=p.histfig_id,role=p.role,
-                name=ref.details and ref.details.name,reference_status=ref.status})
-        end
-        -- Always preserve the subject's role even if display participants are capped.
-        row.subject_roles={}
-        for _,p in ipairs(source.participants) do
-            if p.histfig_id==hfid then table.insert(row.subject_roles,p.role) end
-        end
-        local site=resolver:resolve('site',source.site_id)
-        row.site_name=site.details and site.details.name
-        if source.artifact_id then
-            local artifact=resolver:resolve('artifact',source.artifact_id)
-            row.artifact_name=artifact.details and artifact.details.name
-            row.artifact_status=artifact.status
-        end
-        if source.death_cause_id then row.death_cause=field(df.death_type,source.death_cause_id) end
-        if source.subtype_id then row.subtype=field(df.history_event_simple_battle_subtype,source.subtype_id) end
-        for name,enum in pairs(enum_fields[source.kind] or {}) do
-            row[name]=field(df[enum],source[name..'_id'])
-        end
-        if source.entity_id then
-            local entity=resolver:resolve('entity',source.entity_id)
-            row.entity_name=entity.details and entity.details.name
-        end
-        if source.item_id then
-            local item=resolver:resolve('item',source.item_id)
-            row.item_name=item.details and item.details.name
-            row.item_status=item.status
-        end
-        table.insert(rows,row)
+        table.insert(rows,enrich(source,resolver,hfid))
     end
     return {events=rows,coverage=coverage}
 end
@@ -263,7 +286,7 @@ dfhack.onStateChange['lorekeeper.event_index']=function(change)
     if change==SC_MAP_UNLOADED or change==SC_WORLD_UNLOADED then stop() end
 end
 -- Hot reload must not reuse an index built with a narrower supported-type set.
-if state and state.version~=4 then stop() end
+if state and state.version~=5 then stop() end
 
 if dfhack_flags.module then return end
 start()

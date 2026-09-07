@@ -13,6 +13,7 @@ local reader_text = reqscript('lorekeeper/reader_text')
 local biography_overlay = reqscript('lorekeeper/overlay')
 local friends = reqscript('lorekeeper/friends')
 local event_index = reqscript('lorekeeper/event_index')
+local chronicle = reqscript('lorekeeper/chronicle')
 
 local passed = 0
 
@@ -25,6 +26,25 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local annual_state={year=101,time=101*403200+400000}
+local closed=chronicle.advance(annual_state,102,10)
+assert_true(#closed==1 and closed[1]==101,'annual rollover closes exactly the completed year')
+assert_true(#chronicle.advance(annual_state,102,20)==0,'annual rollover does not duplicate chapter requests')
+local backwards,why=chronicle.advance(annual_state,101,30)
+assert_true(backwards==nil and why=='time_reversal','annual monitor detects incompatible time reversal')
+local site_index=event_index.new_index()
+site_index:add_site({id=1,kind='battle',site_id=745,year=102},745,102)
+site_index:add_site({id=2,kind='battle',site_id=900,year=102},745,102)
+site_index:add_site({id=3,kind='battle',site_id=745,year=100},745,102)
+assert_true(#site_index.site_years[102]==1 and not site_index.site_years[100],
+    'annual index isolates fortress site and bounded year range')
+for id=4,300 do site_index:add_site({id=id,kind='battle',site_id=745,year=102},745,102) end
+assert_true(#site_index.site_years[102]==256 and site_index.site_truncated[102],
+    'annual site buckets remain bounded and report truncation')
+local skipped_state={year=80,time=80*403200}
+local skipped_years,_,skipped_count=chronicle.advance(skipped_state,102,0)
+assert_true(#skipped_years==8 and skipped_count==14,
+    'annual catch-up bounds work and reports omitted years')
 local abduction=event_index.normalize({id=10,target=1,snatcher=2},'HIST_FIGURE_ABDUCTED')
 assert_true(abduction.kind=='abduction' and abduction.participants[1].role=='abducted',
     'abduction retains victim and abductor roles')

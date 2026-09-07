@@ -26,4 +26,26 @@ development, load a newly added overlay without restarting by running
 `:lua require('plugins.overlay').rescan()` in the DFHack launcher. If a new script
 path was added instead, restart DF as described in the installation instructions.
 
-Project context and working assumptions are in [AGENTS.md](AGENTS.md). The phased implementation roadmap is in [PLAN.md](PLAN.md). Technical decisions are recorded in [docs/decisions](docs/decisions), and environment discoveries are kept in [docs/notes](docs/notes). The intended first implementation is a read-only DFHack Lua collector and dedicated in-game summary window that exports structured, versioned records for a later history UI.
+## Fortress chronicles
+
+Click **Fortress chronicles** in the Lorekeeper panel (Ctrl+H), or run
+`lorekeeper/chronicles`. No dwarf needs to be selected.
+
+- **D — Year so far:** request or update a current-year draft.
+- **N/P:** browse saved chapters; scroll within each chapter normally.
+- **R:** explicitly retry a failed chapter. Successful finished chapters are immutable.
+- **Escape:** close and keep playing. The reader updates automatically, including while paused.
+
+With the existing `lorekeeper/autostart` setup enabled, the annual monitor starts
+when the fortress loads and queues the completed year after the calendar rolls
+over. The background watcher writes the chapter; no model call runs inside DFHack.
+Running `lorekeeper/chronicles` also starts the monitor for the current session.
+You do not need to start the dwarf snapshot collector to request a draft.
+
+This first version selects up to 16 supported events explicitly associated with
+the fortress, rather than claiming a complete account of every activity. Coverage
+warnings stay outside the prose. Each fortress load starts a separate recording
+branch; earlier chapters remain browsable and are not silently merged after a
+reload. See [annual chronicle scope and validation](docs/notes/annual-chronicles.md).
+
+Project context and working assumptions are in [AGENTS.md](AGENTS.md). The phased implementation roadmap is in [PLAN.md](PLAN.md). Technical decisions are recorded in [docs/decisions](docs/decisions), and environment discoveries are kept in [docs/notes](docs/notes).

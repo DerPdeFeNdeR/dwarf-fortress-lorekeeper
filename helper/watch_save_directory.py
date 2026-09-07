@@ -11,6 +11,7 @@ from typing import Callable
 from process_queue import process_queue
 from watch_queue import process_if_changed
 from history_view import process_views
+from chronicles import process_chronicles
 from worker_runtime import worker_runtime
 
 
@@ -49,10 +50,11 @@ def watch_directory(
     while True:
         for save in sorted(save_directory.iterdir()):
             if save.is_dir():
-                try:
-                    process_views(save)
-                except Exception as error:
-                    print(f'Lorekeeper: history preparation failed: {type(error).__name__}: {error}', flush=True)
+                for prepare in (process_views,process_chronicles):
+                    try:
+                        prepare(save)
+                    except Exception as error:
+                        print(f'Lorekeeper: {prepare.__name__} failed: {type(error).__name__}: {error}', flush=True)
         count, states, errors = process_directory_once(save_directory, states, processor)
         if count:
             print(f"Lorekeeper: processed {count} translation job(s).", flush=True)
@@ -73,6 +75,10 @@ def main() -> None:
         parser.error("--interval must be positive")
 
     if args.once:
+        for save in sorted(args.save_directory.iterdir()):
+            if save.is_dir():
+                process_views(save)
+                process_chronicles(save)
         count, _, errors = process_directory_once(args.save_directory, {})
         for error in errors:
             print(f"Lorekeeper: queue processing failed: {error}")

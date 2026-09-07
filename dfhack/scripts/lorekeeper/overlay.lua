@@ -45,6 +45,17 @@ function BiographyButton:open_reader()
     end
 end
 
-OVERLAY_WIDGETS = {biography=BiographyButton}
+ChroniclesButton=defclass(ChroniclesButton,overlay.OverlayWidget)
+ChroniclesButton.ATTRS{
+    desc='Read the annual fortress chronicles.',default_enabled=true,
+    default_pos={x=6,y=10},viewscreens='dwarfmode',
+    active=function() return dfhack.isMapLoaded() end,
+    frame={w=30,h=3},frame_style=gui.FRAME_MEDIUM,frame_title='Lorekeeper',
+}
+function ChroniclesButton:init()
+    self:addviews{widgets.HotkeyLabel{frame={t=0,l=0},key='CUSTOM_CTRL_H',label='Fortress chronicles',
+        on_activate=function() dfhack.run_script('lorekeeper/chronicles') end}}
+end
+OVERLAY_WIDGETS = {biography=BiographyButton,chronicles=ChroniclesButton}
 if dfhack_flags.module then return end
 print('Lorekeeper biography button: use the unit sheet, or run lorekeeper/read.')
