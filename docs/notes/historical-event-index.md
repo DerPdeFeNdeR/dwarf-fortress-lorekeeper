@@ -61,11 +61,11 @@ Automated coverage includes participant roles, naming-only semantics, link and
 per-figure limits, duplicate participants, partial-index disclosure, future dates,
 unsupported types, episode bounds, Unicode artifact names, and cache behavior.
 57 Python tests and 62 DFHack tests passed. A real schema-14 worker request
-produced a biography including the named artifact and creation year; generation
+produced a memoire including the named artifact and creation year; generation
 took 10.51 s, preparation 0.58 s, and total latency 12.63 s. An older conflicting
 opening instruction was then restricted to cases without substantial historical
 episodes. Narrative style and event selection remain subject to user review.
-The user approved the initial historical-event biographies and subsequently
+The user approved the initial historical-event memoires and subsequently
 authorized publishing the combined expanded-event/coverage batch on 2026-09-06.
 Rare-event live coverage limitations remain documented below.
 

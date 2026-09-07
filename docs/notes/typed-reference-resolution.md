@@ -1,8 +1,8 @@
-# Typed biography references — 2026-09-06
+# Typed memoire references — 2026-09-06
 
 ## Contract
 
-The user requested general reference resolution so biographies use specific
+The user requested general reference resolution so memoires use specific
 people, places, and objects. `references.lua` centralizes provider lookup,
 typed keys (kind, ID, extra discriminator), deduplication, and explicit status.
 This is not a promise that every DF reference meaning has been reverse engineered.

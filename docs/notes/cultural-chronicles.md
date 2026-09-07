@@ -33,7 +33,7 @@ figures. Missing speakers remain unnamed; no invented audience or quotations.
 
 `references.lua` enriches entity references with name/type/race and
 `classification_observed_now`. `event_index.enrich` carries entity details into
-story subjects. Profile schema 7 / biography view schema 21 invalidate prior
+story subjects. Profile schema 7 / memoire view schema 21 invalidate prior
 enrichment on fresh requests; unchanged dormant requests are not regenerated.
 Heard-story anchors now include resolved storytellers. The historian explains
 organization context and avoids suggesting a visit merely because of a telling.
@@ -76,7 +76,7 @@ only a fresh year-so-far draft includes newly added support immediately.
 - Player visual acceptance and natural annual rollover remain pending. No commit
   or push as part of this change.
 
-No DF restart expected. Reopen Read biography for updated references. Open
+No DF restart expected. Reopen Read memoire for updated references. Open
 `lorekeeper/chronicles` and use D (Year so far) to request a current draft; it updates
 asynchronously even while the game is paused. If modules remain cached, restart DF
 as fallback. No init/config edits or scheduled-task registration were performed.

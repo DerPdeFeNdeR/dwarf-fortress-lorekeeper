@@ -6,7 +6,7 @@ The user replaced the proposed selectable narrators with one consistent
 historian fitting the Dwarf Fortress setting. The voice is learned, observant,
 proud of craft, and dryly witty. Tone changes with the subject: warmth and energy
 for joys and everyday absurdities; gravity and compassion for grief or fear.
-No narrator biography, invented world lore, or eyewitness claims are introduced.
+No narrator memoire, invented world lore, or eyewitness claims are introduced.
 
 `helper/historian.py` owns the narrative contract. `history_view.py` supplies it
 to the existing asynchronous worker. Schema v7 invalidates earlier report-style
@@ -17,7 +17,7 @@ Raw numbers, gaps, and time resets stay out of story prose. Model explanation
 is retained separately as `story_explanation`; the existing technical timeline
 remains visible below the story. A future Details toggle can hide that timeline.
 Following the user's review of repetitive v6 prose, only the latest segment
-is supplied for the biography, starting from a fresh baseline. The full timeline
+is supplied for the memoire, starting from a fresh baseline. The full timeline
 remains intact, including earlier segments and reset markers.
 
 The user explicitly permits imagined internal motives to connect supported
@@ -48,7 +48,7 @@ are introduced by this change.
   Real model output and in-game review remain necessary for future changes.
 - On 2026-09-06 the user supplied Minkot's ready v7 narrative and approved its
   direction. It displays the separate interpretation notice, correct accented
-  name and paragraphs, and one biography without the duplicated older segment.
+  name and paragraphs, and one memoire without the duplicated older segment.
   An imagined connection is marked with "Perhaps"; technical ticks and reset
   markers remain in the timeline below, not the prose. The user then confirmed
   `lorekeeper/test` reported all 31 tests passed.

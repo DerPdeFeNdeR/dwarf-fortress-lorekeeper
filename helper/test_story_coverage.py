@@ -13,8 +13,8 @@ from test_history_view import record
 def death():
     return dict(id=123,kind='death',subject_roles=['slayer'],
                 time={'year':101}, site_name='Testfort', participants=[
-                    dict(role='slayer',name='Urist',reference_status='resolved'),
-                    dict(role='victim',name='Tirist Sobìrrith',reference_status='resolved')])
+                    dict(role='slayer',histfig_id=1,name='Urist',reference_status='resolved'),
+                    dict(role='victim',histfig_id=2,name='Tirist Sobìrrith',reference_status='resolved')])
 
 
 class CoverageTests(unittest.TestCase):

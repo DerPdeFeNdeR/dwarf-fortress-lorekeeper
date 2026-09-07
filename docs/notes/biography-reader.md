@@ -1,4 +1,4 @@
-# Story-first biography reader — 2026-09-06
+# Story-first memoire reader — 2026-09-06
 
 ## Implementation
 
@@ -43,7 +43,7 @@ button remains a separate, not-yet-implemented milestone.
 No game or watcher restart is required. If DFHack retains an older module, retry
 the command first; restart only if it still fails to reload.
 
-1. Select a dwarf with a known biography and run `lorekeeper/read`.
+1. Select a dwarf with a known memoire and run `lorekeeper/read`.
 2. Check prose readability, accents, paragraph spacing, and the small notice.
 3. Scroll using arrow keys, Page Up/Down, or the mouse wheel; try resizing.
 4. Press D: the technical timeline should appear. Try N/P, then D to return.

@@ -33,7 +33,7 @@ class CulturalEventTests(unittest.TestCase):
         self.assertEqual(len(payload['cultural_events']),1)
         self.assertEqual(len(payload['events']),1) # Same ID, different namespace.
         sentence=payload['required_event_coverage'][0]['sentence']
-        self.assertIn('In year 102, Othdo ò told a story',sentence)
+        self.assertIn('In Granite, Othdo ò told a story',sentence)
         self.assertIn('Laka Elmcloak taking the office of lord',sentence)
         self.assertIn('in year 77',sentence)
 

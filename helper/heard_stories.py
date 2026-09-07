@@ -44,11 +44,13 @@ def collect(profile):
         row['topic'].get('link_type') == 'POSITION', row['topic'].get('year', -1), row['subject_key']), reverse=True)[:8]
 
 
-def anchor(identity, stories):
+def anchor(identity, stories, first_person=False):
     """One named office story gets an explicit listening anchor, never an action by the listener."""
     listener = identity.get('name', '').split(',', 1)[0]
     if not listener:
         return []
+    if first_person:
+        listener = 'I'
     for story in stories:
         subject = office_subject(story['topic'])
         if not subject:

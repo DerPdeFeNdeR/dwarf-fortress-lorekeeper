@@ -1,4 +1,4 @@
--- Open the biography reader from the vanilla unit sheet.
+-- Open the memoire reader from the vanilla unit sheet.
 --@ module = true
 local gui = require('gui')
 local widgets = require('gui.widgets')
@@ -15,9 +15,9 @@ local function active()
         df.global.game.main_interface.view_sheets, df.view_sheet_type.UNIT)
 end
 
-BiographyButton = defclass(BiographyButton, overlay.OverlayWidget)
-BiographyButton.ATTRS{
-    desc='Open the Lorekeeper biography reader for the viewed unit.',
+MemoireButton = defclass(MemoireButton, overlay.OverlayWidget)
+MemoireButton.ATTRS{
+    desc='Open the Lorekeeper memoire reader for the viewed unit.',
     default_enabled=true,
     default_pos={x=2,y=6},
     viewscreens='dwarfmode/ViewSheets/UNIT',
@@ -27,15 +27,15 @@ BiographyButton.ATTRS{
     frame_title='Lorekeeper',
 }
 
-function BiographyButton:init()
+function MemoireButton:init()
     self:addviews{
         widgets.HotkeyLabel{view_id='read',frame={t=0,l=0},
-            key='CUSTOM_CTRL_L',label='Read biography',
+            key='CUSTOM_CTRL_L',label='Read Memoire',
             on_activate=self:callback('open_reader')},
     }
 end
 
-function BiographyButton:open_reader()
+function MemoireButton:open_reader()
     -- Recheck at activation: never retain a unit pointer across selections.
     if not active() then return end
     local sheet = df.global.game.main_interface.view_sheets
@@ -56,6 +56,6 @@ function ChroniclesButton:init()
     self:addviews{widgets.HotkeyLabel{frame={t=0,l=0},key='CUSTOM_CTRL_H',label='Fortress chronicles',
         on_activate=function() dfhack.run_script('lorekeeper/chronicles') end}}
 end
-OVERLAY_WIDGETS = {biography=BiographyButton,chronicles=ChroniclesButton}
+OVERLAY_WIDGETS = {biography=MemoireButton,chronicles=ChroniclesButton}
 if dfhack_flags.module then return end
-print('Lorekeeper biography button: use the unit sheet, or run lorekeeper/read.')
+print('Lorekeeper Memoire button: use the unit sheet, or run lorekeeper/memoire.')

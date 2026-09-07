@@ -251,6 +251,10 @@ function enrich(source,resolver,hfid)
         row.artifact_status=artifact.status
     end
     if source.death_cause_id then row.death_cause=field(df.death_type,source.death_cause_id) end
+    if source.kind=='death' or source.kind=='wounding' then
+        local ok,details=pcall(reqscript('lorekeeper/event_method').capture,source)
+        row.method=ok and details or {status='unavailable'}
+    end
     if source.subtype_id then row.subtype=field(df.history_event_simple_battle_subtype,source.subtype_id) end
     for name,enum in pairs(enum_fields[source.kind] or {}) do row[name]=field(df[enum],source[name..'_id']) end
     if source.entity_id then

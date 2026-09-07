@@ -67,7 +67,7 @@ function LorekeeperHistoryWindow:refresh(_, automatic)
             add('')
         end
         if not data then
-            add('Biography queued. This window updates automatically; you can close it and return later.')
+            add('Memoire queued. This window updates automatically; you can close it and return later.')
         else
             add('Status: ' .. data.state)
             if data.state == 'processing' then add('Writing in the background; you can close this window and keep playing.') end

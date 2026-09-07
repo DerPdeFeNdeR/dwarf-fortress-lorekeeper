@@ -1,15 +1,15 @@
--- Read the selected dwarf's biography. Technical history is optional.
+-- Read the selected dwarf's Memoire. Technical history is optional.
 local gui = require('gui')
 local widgets = require('gui.widgets')
 local requests = reqscript('lorekeeper/view_request')
 local text = reqscript('lorekeeper/reader_text')
 local display = reqscript('lorekeeper/display_text')
 
-BiographyWindow = defclass(BiographyWindow, widgets.Window)
-BiographyWindow.ATTRS{frame_title='The Lorekeeper: Biography', frame={w=78,h=34},
+MemoireWindow = defclass(MemoireWindow, widgets.Window)
+MemoireWindow.ATTRS{frame_title='The Lorekeeper: Memoire', frame={w=78,h=34},
     resizable=true, resize_min={w=72,h=22}}
 
-function BiographyWindow:init()
+function MemoireWindow:init()
     local unit = dfhack.gui.getSelectedUnit(true)
     self.unit_id = unit and unit.id
     self.page = 0
@@ -22,10 +22,10 @@ function BiographyWindow:init()
             text_pen=COLOR_WHITE,cursor_pen=COLOR_WHITE,text_hpen=COLOR_WHITE},
         widgets.Label{frame={b=3,l=1},text='Based on game events, with imagined motives\nand interpretation.',
             text_pen=COLOR_DARKGREY},
-        widgets.HotkeyLabel{frame={b=1,l=1},key='CUSTOM_U',label='Update biography',
+        widgets.HotkeyLabel{frame={b=1,l=1},key='CUSTOM_U',label='Update Memoire',
             enabled=function() return self.unit_id ~= nil and
                 (not text.pending(self.data,self.requested) or not self.available or self.request_error ~= nil) end,
-            on_activate=self:callback('update_biography')},
+            on_activate=self:callback('update_memoire')},
         widgets.HotkeyLabel{frame={b=1,l=25},key='CUSTOM_D',label='Details / Story',
             on_activate=function() self.details=not self.details; self:refresh(true,true) end},
         widgets.HotkeyLabel{frame={b=1,r=1},key='LEAVESCREEN',label='Close',
@@ -38,10 +38,10 @@ function BiographyWindow:init()
             visible=function() return not self.details end,
             on_activate=function() self.chapter_key='intro'; self:refresh(true,true) end},
     }
-    self:update_biography()
+    self:update_memoire()
 end
 
-function BiographyWindow:turn_page(delta)
+function MemoireWindow:turn_page(delta)
     if self.details then
         self.page=math.max(0,self.page+delta)
     else
@@ -54,7 +54,7 @@ function BiographyWindow:turn_page(delta)
     self:refresh(true,true)
 end
 
-function BiographyWindow:update_biography()
+function MemoireWindow:update_memoire()
     if self.unit_id then
         local ok, err, requested = requests.request(self.unit_id)
         self.request_error = not ok and tostring(err) or nil
@@ -63,7 +63,7 @@ function BiographyWindow:update_biography()
     self:refresh(true)
 end
 
-function BiographyWindow:onRenderFrame(dc, rect)
+function MemoireWindow:onRenderFrame(dc, rect)
     self.super.onRenderFrame(self,dc,rect)
     local width = math.max(20,math.min(80,(self.subviews.content.frame_body.width or 68)-2))
     local now = dfhack.getTickCount()
@@ -75,7 +75,7 @@ function BiographyWindow:onRenderFrame(dc, rect)
     end
 end
 
-function BiographyWindow:refresh(force, reset_scroll)
+function MemoireWindow:refresh(force, reset_scroll)
     self.data = self.unit_id and requests.read(self.unit_id) or nil
     self.available = self.unit_id and requests.worker_available() or false
     local data = self.data
@@ -132,10 +132,10 @@ function BiographyWindow:refresh(force, reset_scroll)
     self.subviews.content:setChoices(choices,reset_scroll and 1 or self.subviews.content:getSelected())
 end
 
-BiographyScreen = defclass(BiographyScreen,gui.ZScreenModal)
-BiographyScreen.ATTRS{focus_path='lorekeeper/read'}
-function BiographyScreen:init()
-    self:addviews{BiographyWindow{view_id='window'}}
+MemoireScreen = defclass(MemoireScreen,gui.ZScreenModal)
+MemoireScreen.ATTRS{focus_path='lorekeeper/read'}
+function MemoireScreen:init()
+    self:addviews{MemoireWindow{view_id='window'}}
 end
 if view then view:dismiss() end
-view=BiographyScreen{}:show()
+view=MemoireScreen{}:show()

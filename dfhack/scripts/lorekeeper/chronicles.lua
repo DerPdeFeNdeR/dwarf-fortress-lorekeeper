@@ -76,6 +76,12 @@ function ChroniclesWindow:refresh(force)
             (data.state=='processing' and 'The historian is writing. You can keep playing while this finishes.' or
              'No supported events are available for this chapter yet.')
         if data.state~='ready' and data.story and data.story~='' then status=status..' Showing previous draft.' end
+        local voice=reqscript('lorekeeper/narrator').displayed_voice(data)
+        if voice and voice.status=='selected' then
+            body='Narrated by '..voice.name..'\n\n'..body
+        elseif voice and voice.status=='unavailable' then
+            body='No eligible dwarf narrator was available; external chronicler.\n\n'..body
+        end
     end
     if catalog.older_archived then status=status..' Showing the newest 100 chapters; older files remain archived.' end
     if not worker_available then status='Historian offline. Saved chapters remain readable.' end

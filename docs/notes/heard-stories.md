@@ -1,6 +1,6 @@
 # Named stories heard in performances
 
-Date: 2026-09-06. Profile schema 6; biography schema 18.
+Date: 2026-09-06. Profile schema 6; memoire schema 18.
 
 ## Verified mapping
 
@@ -39,12 +39,12 @@ Primary structure reference: [DFHack incident definitions](https://github.com/DF
   enjoyment. Other consequential personal-event coverage remains required too.
 - A new subject qualifies for significance, including an older experience newly
   resolved (revision rather than a falsely new occurrence). Repeated tellings and
-  memory slots are deduplicated. The biography sidecar retains up to 256 processed
+  memory slots are deduplicated. The memoire sidecar retains up to 256 processed
   subject IDs across compatible revisions; at capacity, new subjects alone stop
   triggering generation rather than evicting IDs and creating replay loops.
 - Existing source corrections still permit a safe rebuild. The subject ledger
   resets across incompatible history. Source/model payload changes invalidate
-  legacy prepared biographies only when requested again, not fortress-wide.
+  legacy prepared memoires only when requested again, not fortress-wide.
 
 The OpenAI Docs skill informed explicit separation of narrative instructions from
 the supplied subject context; see [instruction following](https://developers.openai.com/api/docs/guides/prompt-engineering#message-roles-and-instruction-following).
@@ -63,14 +63,14 @@ No invented story quotations are requested.
   remain explicit rather than guessed. No save clock was changed.
 - The actual reader-to-watcher-to-model path completed successfully for the selected
   dwarf: 22.70 seconds model generation, 0.62 seconds preparation, 26.89 seconds
-  total including queue wait. The generated biography included the named office
+  total including queue wait. The generated memoire included the named office
   tale with an explicit listening frame; its required factual anchor passed.
   Generated prose remains subject to player review (including stylistic polish).
-- Reopening the same live biography reported `reuse / unchanged_evidence`, a cache
+- Reopening the same live memoire reported `reuse / unchanged_evidence`, a cache
   hit with zero generation seconds and one occurrence of the named subject. No
   duplicate passage was added.
-- Player verification of the regenerated biography remains pending. Select the
-  same dwarf and use Read biography / `lorekeeper/read`. The named office story
+- Player verification of the regenerated memoire remains pending. Select the
+  same dwarf and use Read memoire / `lorekeeper/read`. The named office story
   should appear as something heard, with year 83 attached to the narrated event.
   The historical location should not be fabricated. Repeated openings should
   not add repeated paragraphs about the same tale.

@@ -1,6 +1,6 @@
-# Biography length and consequential-event coverage — 2026-09-06
+# Memoire length and consequential-event coverage — 2026-09-06
 
-The user noticed that Feb's biography omitted his attributed killing of Tirist
+The user noticed that Feb's memoire omitted his attributed killing of Tirist
 despite including an animal death and an artifact. Inspection confirmed the death
 event was present in the selected model input. It was a writing omission, not a
 collection failure. The old prompt asked for 2–4 short paragraphs, while the
@@ -30,7 +30,7 @@ generic batch wrapper independently asked for concise text.
 This intentionally trades paraphrase freedom on a few important facts for a
 deterministic omission guard. It is not a semantic contradiction detector or
 an audit of every surrounding claim. Unknown names and index/input caps still
-limit coverage; it must not be presented as a complete biography of all events.
+limit coverage; it must not be presented as a complete memoire of all events.
 The OpenAI Docs skill guided task-specific regression checks and human review,
 consistent with [official evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
 
@@ -41,7 +41,7 @@ names-only rejection, responsibility without invented intent, Unicode/linebreak
 normalization, both killing and achievement coverage, sparse input, successful
 publication evidence, and preservation/no automatic retry after a failed check.
 No game restart is required. The existing watcher was restarted and the index
-rebuilt. Use Read biography, then U; the longer story updates automatically.
+rebuilt. Use Read memoire, then U; the longer story updates automatically.
 The user authorized committing/pushing this batch on 2026-09-06 after the
 coverage and length handoff. This approval does not replace the remaining
 rare-event and narrative-quality coverage limits documented below.

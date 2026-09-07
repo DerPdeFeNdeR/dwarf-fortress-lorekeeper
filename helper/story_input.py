@@ -8,6 +8,7 @@ from life_events import collect as collect_life_events
 from historical_episodes import collect as collect_historical_episodes
 from story_coverage import requirements
 from heard_stories import collect as collect_heard_stories, anchor as story_anchor
+from memoire_knowledge import personal_profile, VERSION as KNOWLEDGE_VERSION
 
 
 def stable_json(value):
@@ -32,7 +33,8 @@ def compact_profile(profile):
     if not profile:
         return None
     result = {k: profile[k] for k in ('unit_id', 'histfig_id', 'figures',
-              'relationships', 'friends', 'values', 'preferences', 'personality_facets', 'limitations') if k in profile}
+              'relationships', 'friends', 'values', 'preferences', 'personality_facets',
+              'mental_attributes', 'limitations') if k in profile}
     result['references'] = [r for r in profile.get('references', []) if r.get('status') == 'resolved']
     for key in ('emotions', 'shortterm_memories', 'longterm_memories'):
         result[key] = thoughts(profile.get(key, []))
@@ -56,6 +58,7 @@ def compact_profile(profile):
 
 
 def build_story_input(identity, events, profile):
+    profile = personal_profile(profile)
     selected = narrative_events(events)
     compact = []
     stress = []
@@ -86,10 +89,12 @@ def build_story_input(identity, events, profile):
         compact.append(row)
     episodes=collect_historical_episodes(profile)
     heard=collect_heard_stories(profile)
-    return dict(identity=identity, events=compact, biography_profile=compact_profile(profile),
+    return dict(knowledge_version=KNOWLEDGE_VERSION, identity=identity, events=compact,
+                biography_profile=compact_profile(profile),
                 life_events=collect_life_events(profile),
                 historical_episodes=episodes, heard_stories=heard,
-                required_event_coverage=requirements(episodes) + story_anchor(identity, heard),
+                required_event_coverage=requirements(episodes, (profile or {}).get('histfig_id'))
+                    + story_anchor(identity, heard, first_person=True),
                 stress_bands=list(dict.fromkeys(stress)), final_stress_band=stress[-1] if stress else None,
                 numerical_note='Stress/focus bands are floor(value/1000), not diagnosed mental-state categories.')
 

@@ -10,6 +10,7 @@ from codex_batch import run_process
 from worker_runtime import worker_runtime
 from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events, restore_reference_names
 from story_input import compact_profile, build_story_input, story_key
+from memoire_knowledge import personal_profile
 
 
 def record(tick, stress):
@@ -55,18 +56,20 @@ class HistoryViewTests(unittest.TestCase):
             save = Path(root)
             views = save / 'lorekeeper-views'
             profile = dict(unit_id=1, figures=[dict(id=7068, name='Momuz Lilumuzol')],
-                           relationships=[dict(target_hf=7068, kind='histfig_hf_link_spousest')])
+                           relationships=[dict(target_hf=7068, kind='histfig_hf_link_spousest',reference_key='hf:7068')],
+                           references=[dict(key='hf:7068',id=7068,kind='historical_figure',status='resolved',
+                                            details=dict(name='Momuz Lilumuzol'))])
             write_results(views / '1.profile.json', profile)
             write_results(views / '1.request.json', dict(unit_id=1, profile_file='1.profile.json'))
             (save / 'lorekeeper-history.jsonl').write_text(json.dumps(record(1, 0)) + '\n')
             def generate(items, **kwargs):
-                self.assertEqual(json.loads(items[0]['raw'])['biography_profile'], compact_profile(profile))
+                self.assertEqual(json.loads(items[0]['raw'])['biography_profile'], compact_profile(personal_profile(profile)))
                 return {'results': [dict(id=items[0]['id'], text='A biography.') ]}
             with patch('history_view.run_batch', side_effect=generate):
                 process_views(save)
             self.assertEqual(load_results(views / '1.json')['state'], 'ready')
     def test_historian_contract_preserves_tone_and_factual_boundaries(self):
-        for instruction in ('one consistent', 'dry wit', 'gravity and compassion',
+        for instruction in ('first-person memoire', 'not a checklist or caricature', 'gravity and compassion',
                             'Preserve Unicode names exactly', 'Never invent dialogue',
                             'baseline parenthood', 'removed thought',
                             'explanation field, not text', 'latest recorded segment',

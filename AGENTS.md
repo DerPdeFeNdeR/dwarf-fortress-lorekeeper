@@ -2,9 +2,9 @@
 
 ## Current handoff
 
-- Read `HANDOFF.md` when starting the next session. On 2026-09-06 the user approved
-  monthly biographies and named cultural chronicles, requested commit/push, and
-  will play to collect feedback. Review that feedback before starting new features.
+- Read `HANDOFF.md` when starting the next session. On 2026-09-06 the user requested
+  first-person monthly memoires and personality-shaped annual dwarf narrators.
+  This narration batch is implemented but not committed; player acceptance is pending.
   Natural annual rollover and extended monthly growth remain unverified in play.
 
 ## User baseline
@@ -13,18 +13,47 @@
 - DFHack is already installed and working in the user's game setup.
 - The project should translate/explain in-game information, especially dwarf thoughts, personality, and related mental-state data.
 - The project should also provide a history UI for reviewing changes and notable events over time.
-- Stories use one consistent, original fortress historian, not selectable voices.
-  The narrator is learned, observant, quietly proud of dwarven craft, and dryly
-  witty. Tone follows the events: lively and warm for joys or absurdities,
+- Memoires are first-person accounts in the subject dwarf's voice, shaped by
+  supplied personality, values, interests, and relationships, not selectable voices.
+  This replaces the earlier single external historian design. Annual chronicles
+  use a randomly chosen living adult dwarf citizen, weighted toward involvement
+  in retained local events that year. Save the choice and voice snapshot per
+  save/site/year before generation; drafts, retries, and reloads cannot reroll it.
+  Voice affects delivery, not evidence. Never infer personality from occupation or
+  turn traits into caricatures or facts about fortress conditions. Narrators may
+  recount others' deeds in fortress chronicles but cannot claim eyewitness attendance or invented sources.
+  Heard stories retain their teller and listening framing, never firsthand history.
+  Tone follows the events: lively and warm for joys or absurdities,
   restrained and compassionate for grief and hardship. Plausible internal motives
   and interpretations may be imagined from known character context and signaled
   as interpretation. Never invent events, dialogue, people, relationships, or
   outcomes. Display "Based on game events, with imagined motives and interpretation."
-  outside the story. Use only the latest segment for the main biography; retain
+  outside the story. Use only the latest segment for the main memoire; retain
   earlier segments in the technical timeline. Technical gaps and resets belong
   outside the narrative; do not make them events in the dwarf's life.
+- Narrator mental attributes (linguistic ability, analytical ability, creativity,
+  memory) also shape literary delivery. Capture only those four effective values
+  and caste medians; lower/typical/higher voice bands are editorial, not diagnoses
+  or DF description tiers. Missing attributes stay unknown. Never make lower
+  scores produce broken grammar, mockery, invented forgetting, or factual errors.
+  New profiles include these on demand; saved annual voices gain them once for
+  the same verified HF identity, without rerolling or replacing existing traits.
+  Older annual voice enrichment uses a separate `.narrator.mental.json` companion;
+  Windows Lua rename cannot replace an existing file. Keep the original choice
+  immutable and validate the companion's site/year/HF before reuse.
 - Primary UX requirement: when the player navigates to/selects a dwarf in Dwarf Fortress, the tool should open a dedicated DFHack UI window showing a readable summary of that dwarf's thoughts, personality, and related mental state. Keep the vanilla screen intact. In-place replacement of vanilla text is a possible later experiment, not the initial target.
-- The player-facing reader is `lorekeeper/read`, separate
+- Individual Memoires must stay within personal knowledge: own supported actions,
+  thoughts/memories, witnessed events and explicitly heard tales. A family/friend
+  link alone does not establish knowledge of their life events. Filter model input
+  with `helper/memoire_knowledge.py`; retain raw profiles for technical diagnostics.
+  Do not fabricate rumors or conversations to bridge missing knowledge. Annual
+  chronicles retain their broader historical scope. Schema 24 and monthly-book
+  version 2 prevent old omniscient prose from seeding new passages.
+- Use **Memoire** (the user's spelling) throughout the product. The canonical
+  command is `lorekeeper/memoire`; `lorekeeper/read` remains compatible. Keep
+  existing storage/protocol identifiers and `lorekeeper/overlay.biography` stable
+  so renaming never loses data or saved overlay settings.
+- The player-facing reader is `lorekeeper/memoire`, separate
   from the technical `lorekeeper/history/show` view. Prioritize readable prose,
   a secondary interpretation notice, simple update/details/close controls, and
   automatic completion while keeping an older story readable. Build the reader
@@ -41,17 +70,30 @@
   The user approved the reader in-game on 2026-09-06; see
   `docs/notes/biography-reader.md` for checks and remaining coverage limits.
   The vanilla-screen entry is `lorekeeper/overlay.biography`: a movable panel
-  visible on fortress-mode unit sheets, with a clickable Read biography label
+  visible on fortress-mode unit sheets, with a clickable Read memoire label
   and Ctrl+L shortcut. It defaults on when discovered by the overlay framework;
   honor saved enable/position preferences. No idle collection, file polling, or
   model work belongs in this overlay. It rechecks the active unit at activation.
   Shortcut integration passed and the user confirmed the button works in-game.
 - The user accepted Luna with low reasoning and its roughly 11-second measured
   generation time for now. Automatic in-game updates without R were verified.
-  Further model comparisons, no-reasoning trials, and speculative biography
+  Further model comparisons, no-reasoning trials, and speculative memoire
   pre-generation are deferred; do not silently enable them.
 
 ## Working assumptions
+
+- Atmosphere is optional. The chronicle monitor samples central-cell weather
+  every 120 game ticks, logging changes/daily checkpoints in shared branch/year
+  `lorekeeper-environment` files. Cache one site-anchor biome/region; no map scans
+  or per-dwarf periodic atmosphere capture. Python reads bounded committed prefixes.
+  Never apply current weather to old events. Personal Memoire inputs exclude
+  shared weather; firsthand experiences need personal thoughts/memories. Moon
+  phases stay unavailable until verified. Weather alone cannot create chapters.
+  See `docs/notes/observed-atmosphere.md`.
+- Annual coverage failures permit one bounded sentence-index correction per
+  request, persisted before the model call. Recheck every fact, preserve prior
+  good prose on failure, retain candidate/response diagnostics, and never silently
+  loop or weaken coverage. See `docs/notes/chronicle-correction.md`.
 
 - Treat DFHack as the integration boundary. Prefer DFHack Lua scripts and APIs before considering a compiled DFHack plugin.
 - Keep game-facing collection separate from translation and presentation. The collector should emit stable, structured records rather than UI-ready prose.
@@ -61,7 +103,7 @@
 - Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The optional HTTP API prototype defaults to `gpt-5-mini`; the active Codex watcher explicitly defaults to `gpt-5.6-luna` with low reasoning.
 - Keep the worker's model and effort independent of interactive Codex defaults.
   `LOREKEEPER_MODEL` and `LOREKEEPER_REASONING_EFFORT` configure its invocation;
-  never change the user's personal Codex config for Lorekeeper. Biography cache
+  never change the user's personal Codex config for Lorekeeper. Memoire cache
   keys include both settings and the historian prompt. Save requested generation settings separately from
   the provenance of the displayed story; failed replacements keep old prose.
   Reopening requests a new model version, not a bulk regeneration of dormant
@@ -94,16 +136,16 @@
   prepared results without requesting new work; reopening requests newer history.
   The open window also polls bounded prepared status once per wall-clock second,
   including while DF is paused; unchanged status must not rebuild the display.
-  Keep a previous biography visible, or immediately show a small explicitly
+  Keep a previous memoire visible, or immediately show a small explicitly
   factual overview when none exists. The player may close the window and play
   while generation continues outside DFHack.
-  Legacy schema-18 biographies use a Python-only `.biography-memory.json` sidecar for
+  Legacy schema-18 memoires use a Python-only `.biography-memory.json` sidecar for
   conservative incremental continuation. Unchanged evidence reuses prose; compatible
   new events append with prior prose explicitly labeled interpretation and separate
   verified context. Reference corrections, old-event discovery, time reversal,
   stable-context changes, or length limits rebuild instead. Never advance the
   checkpoint after a failed update or feed invented motives back as verified facts.
-  New reader requests use schema 21 / monthly protocol 1: a short introduction
+  New reader requests use schema 25 / monthly protocol 1: a short introduction
   and recollections plus significant monthly chapters. Reopening checks evidence
   on demand; it does not write a passage merely because another month passed.
   Each month is exactly one narrative paragraph; the introduction may have 1-3.
@@ -137,14 +179,14 @@
   The user verified responsive opening/refresh, story completion, and N/P
   timeline pagination on 2026-09-06. Older completed stories remain readable
   with their preparation time and explicit revision labeling.
-- On-demand biography profiles are separate bounded `.profile.json` files
+- On-demand memoire profiles are separate bounded `.profile.json` files
   referenced by small view requests. Never add this capture to the periodic
   collector. Capture is capped per section (64 entries, 128 emotions), with a
   128 KiB file limit; unsupported/truncated data must be reported. R does not
   recapture; reopening does. Compact semantic profile content participates in
-  schema-v21 story caching, excluding capture/recall time and emotional strength.
+  schema-v23 story caching, excluding capture/recall time and emotional strength.
   Full profiles remain separate from the compact model input. The user verified initial profile
-  capture and all 33 then-current Lua tests; see biography audit notes.
+  capture and all 33 then-current Lua tests; see memoire audit notes.
 - Resolve Death/UnexpectedDeath references as historical figures only; do not
   treat witnessed-death/body references as figure IDs. The user verified Minkot's
   reference 7068 resolves to Momuz Lilumuzol and her link is
@@ -155,7 +197,7 @@
   not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
   error, and budget-exhausted status. Cache only within one capture so mutable
   names and save/world changes cannot reuse stale objects. Limit 160 references
-  and link depth 2. Profile schema 7 / story schema 21 use typed references
+  and link depth 2. Profile schema 9 / story schema 23 use typed references
   and unique full-name accent restoration; never guess among ambiguous matches.
 - WatchPerform references are performance incidents, not historical events directly.
   Only Performance / STORYTELLING_EVENT with a valid reference_id and no written
@@ -166,7 +208,7 @@
   date, narrated-event date, reaction, typed participants, and resolved office/entity
   names. Hearing about an election does not make the listener a participant or
   supporter. Current office assignments do not establish historical event location.
-  A subject ledger prevents re-tellings from repeatedly triggering biography
+  A subject ledger prevents re-tellings from repeatedly triggering memoire
   generation (legacy 256 IDs; monthly book limit 2,000). See
   `docs/notes/heard-stories.md`; the user approved the current result for playtesting.
 - Include resolved performance participants as storytellers, never as the people
@@ -208,12 +250,12 @@
   a strange mood from artifact creation. Retain event IDs, roles, and coverage.
   Profiles captured during indexing stay partial until Update/reopen; disclose
   this outside the prose. See `docs/notes/historical-event-index.md`.
-- Keep writing-process commentary out of the historian's prose, including claims
-  about what is not invented. Show a blank line between biography and timeline.
+- Keep writing-process commentary out of the narrator's prose, including claims
+  about what is not invented. Show a blank line between memoire and timeline.
   Seeing a body is not witnessing its death, and ANYTHING supplies no specific
   emotion. Missing cups/wells do not establish poor drink quality. Preserve these
-  distinctions explicitly when evaluating faster biography models.
-- Legacy full biographies are not limited to two paragraphs. Target 4–6 developed paragraphs
+  distinctions explicitly when evaluating faster memoire models.
+- Legacy full memoires are not limited to two paragraphs. Target 4–6 developed paragraphs
   (about 350–550 words) for substantial evidence, 1–3 shorter paragraphs for sparse
   histories. Current monthly chapters override this: one paragraph per month,
   with 1–3 short introductory paragraphs. Required factual anchors for resolvable selected historical deaths,
@@ -281,6 +323,48 @@
 
 ### Annual fortress chronicles
 
+- Request schema 2 includes a saved narrator; schema 1 remains readable. The Lua
+  narrator selector visits at most 32 active units per frame with a 2 ms target,
+  captures only 23 voice facets and up to 32 explicit values for the chosen dwarf,
+  and never invokes full memoire profiles or scans world history. Weight is
+  1 + min(unique retained local-year events, 8). Saved voice files are capped at
+  32 KiB. No eligible citizen uses an explicitly labeled external chronicler;
+  invalid saved choices fail rather than silently selecting someone else.
+  Published story attribution is separate from a requested narrator, so failed
+  updates do not misattribute old prose. Completed annual chapters stay immutable.
+  See `docs/decisions/0007-dwarf-narrators.md` and `docs/notes/dwarf-narrators.md`.
+- Event narratives include supported causes/methods beside the event. The
+  on-demand `event_method.lua` resolves one exact indexed historical event and
+  at most two recorded weapon descriptions; never scan combat reports, units,
+  or world history for a method. Preserve projectile versus launcher roles.
+  Resolve wound injury type/body part/loss when supported. Generic STRUCK_DOWN,
+  MURDER, absent or unknown codes do not imply a weapon, attack or motive.
+  Method details participate in model input and coverage; personal knowledge
+  filtering still removes hidden incident details from Memoires. See
+  `docs/notes/event-methods.md` for verified fields and limits.
+- Annual prose mentions its year at most once near the opening. Deterministic
+  local-event examples use month names from valid event ticks (33,600 per month);
+  unknown months stay unspecified. Keep earlier years in a tale's historical
+  subject distinct from the local performance month. Shared calendar code supplies
+  both monthly memoires and annual labels; never ask the model to guess dates.
+  Establish a month once for nearby events instead of repeating it at each
+  sentence/paragraph opening; a later reflective mention is fine. Explain supplied
+  organization/subject context at first mention, not in a detached list later.
+  Annual coverage uses bounded ordered factual clauses within one sentence;
+  connective language and shared month context are flexible, but roles, tellers,
+  subjects and topic years remain checked. This is a structural omission guard,
+  not a semantic truth proof. Memoire coverage keeps its existing contract.
+  Do not add a second model call or rewrite pass for style. Completed chronicles
+  remain immutable; D requests a new current-year draft. See
+  `docs/notes/chronicle-prose.md`.
+  Preserve the latest coverage-rejected candidate separately as
+  `<chapter-key>.rejected.json`, with missing IDs, requirements, request/prompt
+  digests and generation settings. Never publish that candidate or replace the
+  last good story with it. Keep one diagnostic file per chapter, no automatic
+  coverage retries, and use the Chronicle label for annual validation errors.
+  A coverage mismatch does not prove a fact was omitted: inspect rejected prose
+  before changing requirements. Tests must reject wrong roles, dates and negation
+  while allowing supported appointment wording and small spelled-out years.
 - `lorekeeper/chronicle` is the bounded annual monitor, started by the existing
   `lorekeeper/autostart` hook. `lorekeeper/chronicles` is its separate reader and
   the fortress overlay button opens it without requiring a selected dwarf.

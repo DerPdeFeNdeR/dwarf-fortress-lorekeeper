@@ -1,12 +1,12 @@
-# Biography responsiveness — 2026-09-06
+# Memoire responsiveness — 2026-09-06
 
 ## Change
 
 The player reported a long wait for Udib's first biography. Keep game display
 work bounded and useful independently of model completion:
 
-- Show the existing biography immediately, or an explicitly non-generated
-  overview (stress and up to three emotional entries) if no biography exists.
+- Show the existing memoire immediately, or an explicitly non-generated
+  overview (stress and up to three emotional entries) if no memoire exists.
 - Poll prepared status once per wall-clock second while the window renders,
   including while paused. Rebuild choices only when status changes and preserve
   selection. R remains available; neither polling nor R recaptures the profile.

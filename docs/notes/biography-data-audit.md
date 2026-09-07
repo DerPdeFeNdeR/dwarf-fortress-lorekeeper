@@ -1,4 +1,4 @@
-# Biography data audit — 2026-09-06
+# Memoire data audit — 2026-09-06
 
 Initial read-only audit followed by the on-demand implementation below.
 
@@ -9,7 +9,7 @@ It retains subthought references but not emotion flags or timestamps. It does
 not separately capture memories, values, preferences, needs, or relationships.
 `history_view.py` compares thoughts by thought/emotion IDs, so same-category
 reference replacements can disappear from the grouped timeline. Enriching
-biographies requires revisiting semantic event identity without reintroducing
+memoires requires revisiting semantic event identity without reintroducing
 the old subthought-only recording churn.
 
 ## Sources and compatibility
@@ -57,7 +57,7 @@ flags, short/long/core memories, explicit values, needs, raw preference IDs,
 current historical-figure links and resolved names, plus selected personality
 facets. It reports unavailable/truncated sections. Core memory change fields
 remain raw enums; cultural defaults and preference labels are not implemented.
-This is an incremental profile, not a claim of complete biography coverage.
+This is an incremental profile, not a claim of complete memoire coverage.
 
 View requests reference immutable profile files, capped at 128 KiB. Python
 validates paths, size, and matching unit identity; incorporates profile content

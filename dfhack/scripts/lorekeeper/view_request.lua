@@ -47,6 +47,10 @@ function request(unit_id)
     local nonce = os.time()
     local request_data = {unit_id=unit_id, year=df.global.cur_year,
         tick=df.global.cur_year_tick, nonce=nonce, monthly_version=1}
+    local session=reqscript('lorekeeper/chronicle').runtime
+    if session then
+        request_data.environment=reqscript('lorekeeper/environment').reference(session,df.global.cur_year)
+    end
     local target = ('%s/%d.%d.%d.%d.request.json'):format(path, unit_id,
         df.global.cur_year, df.global.cur_year_tick, nonce)
     local existing = io.open(target, 'r')
@@ -56,9 +60,9 @@ function request(unit_id)
     local profile_name
     if unit then
         local captured, profile = pcall(function() return reqscript('lorekeeper/profile').capture(unit) end)
-        if not captured then return nil, 'biography capture failed: ' .. tostring(profile) end
+        if not captured then return nil, 'memoire capture failed: ' .. tostring(profile) end
         local encoded = json.encode(profile, {pretty=false})
-        if #encoded > 131072 then return nil, 'biography profile exceeds 128 KiB' end
+        if #encoded > 131072 then return nil, 'memoire profile exceeds 128 KiB' end
         profile_name = ('%d.%d.%d.%d.profile.json'):format(unit_id,
             df.global.cur_year, df.global.cur_year_tick, nonce)
         local output, profile_error = io.open(path .. '/' .. profile_name, 'w')

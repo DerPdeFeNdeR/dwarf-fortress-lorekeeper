@@ -22,17 +22,17 @@ end
 
 function status(data, requested, available, request_error)
     if request_error then return 'Could not request an update. See Details.' end
-    if not available then return 'Historian offline. Saved biographies are still readable.' end
+    if not available then return 'Historian offline. Saved memoires are still readable.' end
     if pending(data, requested) then
         if data and data.monthly_version then
             return 'Writing monthly chapters in the background. Saved chapters remain readable.'
         end
-        return data and data.story and 'Updating biography. The previous version is shown below.' or
-            'The historian is preparing this biography...'
+        return data and data.story and 'Updating Memoire. The previous version is shown below.' or
+            'Preparing this Memoire...'
     end
     if data and data.state == 'failed' then return 'The update failed. Try Update or see Details.' end
     if data and data.biography_update and data.biography_update.mode=='defer' then
-        return 'No significant new developments. Saved biography unchanged.'
+        return 'No significant new developments. Saved memoire unchanged.'
     end
     if data and data.state == 'empty' then return 'No recorded history yet.' end
     if data and data.monthly_version then
@@ -41,11 +41,11 @@ function status(data, requested, available, request_error)
     if data and data.historical_event_coverage and data.historical_event_coverage.status=='building' then
         return 'Older events were still indexing. Choose Update to include newly indexed events.'
     end
-    return 'Saved biography. Choose Update to include newer experiences.'
+    return 'Saved Memoire. Choose Update to include newer experiences.'
 end
 
 function lines(data, width)
     if data and data.story and data.story ~= '' then return display.wrap(data.story, width) end
-    return display.wrap('This dwarf\'s biography will appear here when it is ready.\n\n' ..
+    return display.wrap('This dwarf\'s memoire will appear here when it is ready.\n\n' ..
         'You can close this window and keep playing. There is no need to wait here.', width)
 end

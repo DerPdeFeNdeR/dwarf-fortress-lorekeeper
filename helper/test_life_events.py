@@ -69,10 +69,11 @@ class LifeEventTests(unittest.TestCase):
                            dict(kind='histfig_hf_link_spousest',reference_key='hf:2')])
         self.assertEqual(collect(profile)['events'],[])
 
-    def test_payload_retains_events_and_changes_cache_identity(self):
+    def test_memoire_retains_relationship_but_not_world_derived_birth(self):
         a=build_story_input({},[],dict(references=[figure(1,born_year=100)],
             relationships=[dict(kind='histfig_hf_link_childst',reference_key='hf:1')]))
-        self.assertEqual(a['life_events']['events'][0]['kind'],'child_birth')
+        self.assertEqual(a['life_events']['events'],[])
+        self.assertEqual(a['biography_profile']['figures'][0]['name'],'Person 1')
         self.assertNotEqual(story_key(a,13),story_key(build_story_input({},[],{}),13))
 
     def test_event_output_is_bounded_and_reports_truncation(self):

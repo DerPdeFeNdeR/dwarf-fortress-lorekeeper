@@ -1,4 +1,4 @@
--- Bounded on-demand biography context. Never called by the background collector.
+-- Bounded on-demand memoire context. Never called by the background collector.
 --@module = true
 local references = reqscript('lorekeeper/references')
 
@@ -16,7 +16,7 @@ function reference_kind(thought)
 end
 
 function quick_overview(unit)
-    local lines = {'Character overview (not a generated biography)'}
+    local lines = {'Character overview (not a generated memoire)'}
     local soul = unit.status.current_soul
     if not soul then table.insert(lines, 'No personality information is available.'); return lines end
     local mind = soul.personality
@@ -46,7 +46,7 @@ end
 
 function capture(unit)
     local resolver = references.new(references.game_providers())
-    local result = {schema_version=7, unit_id=unit.id,
+    local result = {schema_version=9, unit_id=unit.id,
         histfig_id=unit.hist_figure_id, captured_at={year=df.global.cur_year,
         tick=df.global.cur_year_tick}, source={df_version=dfhack.getDFVersion(),
         dfhack_version=dfhack.getDFHackVersion()}, limitations={}, figures={},
@@ -135,9 +135,9 @@ function capture(unit)
     result.friends, friend_limits = reqscript('lorekeeper/friends').capture(field(social,'hf_visual'),resolver)
     for _,note in ipairs(friend_limits) do table.insert(result.limitations,note) end
     table.insert(result.limitations,'Friends are directional current observations, not mutual bonds or dated formation events.')
-    result.personality_facets = scalar_fields(field(personality, 'traits'),
-        {'ANXIETY_PROPENSITY','ORDERLINESS','ALTRUISM','BRAVERY','CRUELTY',
-         'DUTIFULNESS','FRIENDLINESS','STRESS_VULNERABILITY'})
+    result.personality_facets = reqscript('lorekeeper/narrator').traits(personality)
+    result.mental_attributes = reqscript('lorekeeper/narrator').mental_attributes(unit)
+    table.insert(result.limitations,'Mental attributes shape literary delivery only; relative bands are editorial, not intelligence diagnoses.')
     table.insert(result.limitations, 'Values are explicit personal entries; cultural defaults are not resolved.')
     for _, reference in ipairs(result.references) do
         if reference.kind == 'historical_figure' and reference.status == 'resolved' then

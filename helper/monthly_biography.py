@@ -10,13 +10,12 @@ from historian import HISTORIAN_CONTEXT, STORY_NOTICE, restore_reference_names
 from process_queue import write_results, repair_story_names
 from story_coverage import requirements, validate
 from story_input import stable_json
+from fortress_calendar import MONTH_TICKS, MONTHS
+from environment import ATMOSPHERE_CONTEXT, personal as personal_environment
 
-VERSION = 1
-MONTH_TICKS = 33600
-MONTHS = ('Granite', 'Slate', 'Felsite', 'Hematite', 'Malachite', 'Galena',
-          'Limestone', 'Sandstone', 'Timber', 'Moonstone', 'Opal', 'Obsidian')
+VERSION = 2  # Archive old evidence/prose so omniscient passages cannot seed new chapters.
 CHAPTER_CONTEXT = """
-This is ONE chapter of a monthly biography, overriding full-biography length and
+This is ONE chapter of a monthly memoire, overriding full-biography length and
 opening instructions. Return only its prose. A monthly chapter must be exactly
 ONE narrative paragraph, normally 100-180 words, never more than 300 words.
 The introduction may use 1-3 short paragraphs. Do not include a heading.
@@ -34,7 +33,7 @@ Use them for restrained callbacks, not new facts or repetition. Do not summarize
 other months. Use natural storytelling, not a likes/dislikes inventory. Keep
 technical evidence limitations and writing-process commentary out of the prose.
 Integrate every required_event_coverage sentence verbatim in this chapter.
-"""
+""" + ATMOSPHERE_CONTEXT
 
 
 def month_key(when):
@@ -92,10 +91,10 @@ def read_json(path, limit=2000000):
     with path.open('rb') as source:
         raw = source.read(limit + 1)
     if len(raw) > limit:
-        raise ValueError('Monthly biography storage limit exceeded')
+        raise ValueError('Monthly memoire storage limit exceeded')
     value = json.loads(raw)
     if not isinstance(value, dict):
-        raise ValueError('Invalid monthly biography document')
+        raise ValueError('Invalid monthly memoire document')
     return value
 
 
@@ -108,13 +107,14 @@ def compatible(book, records, request):
             and current['requested_time'] >= old.get('requested_time', [0, 0]))
 
 
-def evidence_payload(evidence, identity):
+def evidence_payload(evidence, identity, narrator_id=None):
     rows = list(evidence.values())
     episodes = {'events': [r['value'] for r in rows if r['source'] == 'historical']}
     heard = [r['value'] for r in rows if r['source'] == 'heard']
     return dict(events=[r['value'] for r in rows if r['source'] == 'observation'],
                 historical_episodes=episodes, heard_stories=heard,
-                required_event_coverage=requirements(episodes) + anchor(identity, heard))
+                required_event_coverage=requirements(episodes, narrator_id)
+                    + anchor(identity, heard, first_person=True))
 
 
 def important(old, current, identity):
@@ -136,7 +136,8 @@ def important(old, current, identity):
 def intro_context(payload):
     profile = payload.get('biography_profile') or {}
     return dict(identity=payload.get('identity'), profile={k: profile[k] for k in (
-        'relationships', 'friends', 'values', 'preferences') if k in profile})
+        'relationships', 'friends', 'values', 'preferences', 'personality_facets',
+        'mental_attributes') if k in profile})
 
 
 def publish_catalog(directory, unit, book, state):
@@ -160,7 +161,7 @@ def publish_catalog(directory, unit, book, state):
 
 def save_book(path, book):
     if len(json.dumps(book, ensure_ascii=True, indent=2, sort_keys=True).encode()) > 1900000:
-        raise ValueError('Monthly biography evidence capacity reached; saved chapters are preserved.')
+        raise ValueError('Monthly memoire evidence capacity reached; saved chapters are preserved.')
     write_results(path, book)
 
 
@@ -237,12 +238,14 @@ def process(directory, state, payload, records, profile, generate):
     key = 'intro' if 'intro' in pending else months[0]
     chapter = book['chapters'][key]
     evidence = chapter['evidence']
-    required = evidence_payload(evidence, payload['identity'])['required_event_coverage']
+    required = evidence_payload(evidence, payload['identity'],
+        (payload.get('biography_profile') or {}).get('histfig_id'))['required_event_coverage']
     earlier = sorted((k for k, v in book['chapters'].items() if k != 'intro' and k < key and v.get('file')), reverse=True)[:2]
     if book['chapters'].get('intro', {}).get('file') and key != 'intro':
         earlier.append('intro')
     prior = [read_json(directory / book['chapters'][k]['file'], 65536)['text'] for k in earlier]
     raw = dict(identity=payload['identity'], chapter_title=title(key), chapter_evidence=evidence,
+               environment=personal_environment(directory.parent,state['request'],key),
                biography_profile=payload.get('biography_profile'), required_event_coverage=required,
                prior_narrative=dict(kind='generated_interpretation', text='\n\n'.join(prior)[:12000]),
                previous_chapter=read_json(directory / chapter['file'], 65536).get('text') if chapter.get('file') else None)

@@ -30,7 +30,7 @@ class HeardStoryTests(unittest.TestCase):
         self.assertNotIn('subject_roles', stories[0])
         payload = build_story_input({'name': 'Urist'}, [], profile())
         self.assertEqual(payload['historical_episodes']['events'], [])
-        self.assertIn('Urist heard with interest a story about Elda Elmcloak', payload['required_event_coverage'][0]['sentence'])
+        self.assertIn('I heard with interest a story about Elda Elmcloak', payload['required_event_coverage'][0]['sentence'])
 
     def test_repeated_performances_and_memory_slots_deduplicate_subject(self):
         data = profile()

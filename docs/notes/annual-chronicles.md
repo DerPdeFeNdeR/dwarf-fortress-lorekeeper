@@ -8,7 +8,7 @@ Date: 2026-09-06
   `chronicles.lua` reads prepared chapters. The existing autostart hook starts both
   the index and monitor. No additional DFHack configuration line is needed.
 - Python: `chronicles.py`, invoked by `watch_save_directory.py`, handles at most
-  one annual model job per watcher cycle. Biography and annual preparation errors
+  one annual model job per watcher cycle. Memoire and annual preparation errors
   are isolated. Existing model configuration remains unchanged.
 - Buckets retain at most 256 events per year for the current/previous year. Select
   up to 16 by importance/diversity. Resolution yields after each event and caps

@@ -1,15 +1,16 @@
-# Monthly biographies — 2026-09-06
+# Monthly memoires — 2026-09-06
 
 Publication checkpoint: the user approved the monthly/cultural batch for commit
-and normal play. Current profile/view schemas are 7/21; schema-19/20 discussion
+and normal play. The subsequent first-person memoire update uses profile/view
+schemas 9/23 (see [dwarf narrators](dwarf-narrators.md)); schema-19/20 discussion
 below records earlier iterations. See `../../HANDOFF.md` for the new-session
 starting point and remaining long-running playtest coverage.
 
 ## Decision and behavior
 
-The user requested a developing biography organized by months within years, with
+The user requested a developing memoire organized by months within years, with
 only important developments. Keep a short introduction/recollections section.
-The existing Read biography button remains the entry point; N/P browse saved
+The existing Read memoire button remains the entry point; N/P browse saved
 chapters in introduction-first order, then current/latest recorded month followed
 by older months newest-first. Every opening starts at introduction. I returns to
 the introduction, U requests a fresh bounded
@@ -54,7 +55,7 @@ Prompt instructions separate rules, facts, and prior prose following
 `monthly_biography.py` owns the Python-only `<unit>.monthly-book.json` manifest,
 written-evidence checkpoints, and immutable `<unit>.monthly.<digest>.json` chapters
 under `lorekeeper-views`. Schema 20 / request monthly_version 1 opt into this path;
-old protocol requests retain the legacy implementation. Existing biographies remain
+old protocol requests retain the legacy implementation. Existing memoires remain
 readable during lazy migration. No bulk migration of dormant dwarves.
 
 Introduction is generated first, then months newest-first. One model call per dwarf
@@ -94,7 +95,7 @@ forgotten before any on-demand profile capture may remain unavailable.
 The user subsequently requested exactly one paragraph per month and introduction
 as the first page, followed by the current/latest recorded month and older months.
 Schema 20 and the chapter writer fingerprint invalidate old writing on a fresh
-request; no dormant biography migration is triggered. Opening selects `intro`
+request; no dormant memoire migration is triggered. Opening selects `intro`
 explicitly and background refresh retains an explicitly selected month.
 
 Validation: 110 Python tests passed, with two opt-in integrations skipped in the

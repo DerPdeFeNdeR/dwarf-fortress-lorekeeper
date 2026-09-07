@@ -2,7 +2,7 @@
 
 ## Scope
 
-The user requested event-led biographies instead of lists of likes/dislikes, and
+The user requested event-led memoires instead of lists of likes/dislikes, and
 explicitly added friends. Capture remains on demand; no collector changes, global
 history scans, or recursive friendship graph traversal were introduced.
 
@@ -59,11 +59,11 @@ acquaintance exclusion, incident deduplication and merging, factual involvement,
 event limits, focus selection, and model payload/cache participation.
 
 No game restart should be necessary; the watcher was restarted by the agent.
-With a dwarf selected, open Read biography or run `lorekeeper/read`, then press U
+With a dwarf selected, open Read memoire or run `lorekeeper/read`, then press U
 if already open. Wait for automatic completion; no need to unpause or start the
 collector just to test existing history. `lorekeeper/profile` now prints friend
 names and directional labels. Compare those with the vanilla relationship tab.
 Try Minkot and a second dwarf; check that named events improve individuality and
 that neither a current bond nor a remembered feeling is presented as a new event.
-The user subsequently authorized committing/pushing the combined biography
+The user subsequently authorized committing/pushing the combined memoire
 batch on 2026-09-06; see biography-event-coverage.md for final validation.

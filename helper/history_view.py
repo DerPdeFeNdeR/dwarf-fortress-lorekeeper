@@ -13,7 +13,7 @@ from story_coverage import CoverageError, validate as validate_coverage
 from biography_updates import APPEND_CONTEXT, load_memory, plan, checkpoint, make_memory
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 21
+VIEW_SCHEMA_VERSION = 26
 
 
 def load_profile(directory, request):
@@ -21,14 +21,14 @@ def load_profile(directory, request):
     if not name:
         return None
     if not isinstance(name, str) or '/' in name or '\\' in name or not name.endswith('.profile.json'):
-        raise ValueError('Invalid biography profile filename')
+        raise ValueError('Invalid memoire profile filename')
     with (directory / name).open('rb') as source:
         raw = source.read(131073)
     if len(raw) > 131072:
-        raise ValueError('Biography profile exceeds 128 KiB')
+        raise ValueError('Memoire profile exceeds 128 KiB')
     profile = json.loads(raw.decode('utf-8'))
     if not isinstance(profile, dict) or profile.get('unit_id') != request['unit_id']:
-        raise ValueError('Biography profile belongs to another dwarf')
+        raise ValueError('Memoire profile belongs to another dwarf')
     return profile
 
 
@@ -150,7 +150,7 @@ def process_views(save):
             profile = load_profile(directory, request)
         except (OSError, ValueError) as error:
             write_results(output, dict(state='failed', request=request,
-                                      error='Could not load biography profile: ' + str(error)))
+                                      error='Could not load memoire profile: ' + str(error)))
             continue
         revision = profile_revision(revision, profile)
         payload = build_story_input(records[-1]['snapshot']['identity'] if records else {}, events, profile)
@@ -270,13 +270,13 @@ def complete_story(request_path, output, state, item, profile, semantic_key,
         result['text'] = restore_reference_names(result['text'], profile)
         text = result['text'].strip()
         if not text:
-            raise ValueError('Generated biography is empty.')
+            raise ValueError('Generated memoire is empty.')
         validate_coverage(text, json.loads(item['raw']).get('required_event_coverage', []))
         if state['biography_update']['mode'] == 'append':
             if len(text.encode('utf-8')) > 2000:
-                raise ValueError('Biography continuation exceeds the size limit.')
+                raise ValueError('Memoire continuation exceeds the size limit.')
             if any(p.strip() in state['story'] for p in text.split('\n\n') if p.strip()):
-                raise ValueError('Biography continuation repeats an existing paragraph.')
+                raise ValueError('Memoire continuation repeats an existing paragraph.')
             text = state['story'] + '\n\n' + text
         if len(text.encode('utf-8')) > 8000:
             raise ValueError('Generated story exceeds the display size limit.')

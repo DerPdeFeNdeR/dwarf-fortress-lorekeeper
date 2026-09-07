@@ -60,14 +60,17 @@ class StoryInputTests(unittest.TestCase):
         thought = dict(thought_name='WitnessDeath', emotion_name='HORROR', subthought=141,
                        reference_key='incident:141:nil', year_tick=10, relative_strength=20)
         profile = dict(figures=[dict(id=3, name='Tirist Sobìrrith')],
-                       emotions=[thought, thought], relationships=[dict(target_hf=3, kind='child')],
-                       references=[dict(key='incident:141:nil', status='resolved',
-                                        details=dict(victim_name='Dattle Brown'))])
+                       emotions=[thought, thought], relationships=[dict(target_hf=3, kind='child',reference_key='hf:3')],
+                       references=[dict(key='incident:141:nil', id=141,kind='incident',status='resolved',
+                                        details=dict(victim_name='Dattle Brown')),
+                                   dict(key='hf:3',id=3,kind='historical_figure',status='resolved',
+                                        details=dict(name='Tirist Sobìrrith'))])
         payload = build_story_input({}, [], profile)
         compact = payload['biography_profile']
         self.assertEqual(compact['figures'], profile['figures'])
         self.assertEqual(compact['emotions'][0]['count'], 2)
-        self.assertEqual(compact['references'], profile['references'])
+        self.assertEqual(sorted(compact['references'],key=lambda r:r['key']),
+                         sorted(profile['references'],key=lambda r:r['key']))
         self.assertNotIn('relative_strength', stable_json(payload))
         changed = copy.deepcopy(profile)
         changed['emotions'][0]['relative_strength'] = 50

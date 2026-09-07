@@ -4,6 +4,8 @@ local json=require('json')
 local index=reqscript('lorekeeper/event_index')
 local references=reqscript('lorekeeper/references')
 local culture=reqscript('lorekeeper/culture_index')
+local narrator=reqscript('lorekeeper/narrator')
+local environment=reqscript('lorekeeper/environment')
 
 runtime=runtime or nil
 timer=timer or nil
@@ -43,6 +45,7 @@ end
 function stop()
     if timer then dfhack.timeout_active(timer,nil) end
     timer=nil; runtime=nil
+    environment.state=nil
     culture.stop()
 end
 
@@ -84,9 +87,11 @@ local function export_request(job)
     local bucket=state.site_years[job.year] or {}
     local selected=index.select_events(bucket,16)
     local performances,culture_truncated=culture.select(culture.state,job.year)
-    local payload={schema_version=1,site_id=runtime.site_id,
+    local voice=narrator.for_year(directory(),job.year,runtime.site_id,state.by_figure,write_request)
+    local payload={schema_version=2,narrator=voice,site_id=runtime.site_id,
         site_name=site.details and site.details.name or 'Unnamed fortress',
         save_id=df.global.world.cur_savegame.save_dir,branch=runtime.branch,
+        environment=environment.reference(runtime,job.year),
         year=job.year,kind=job.kind,captured_year=df.global.cur_year,
         captured_tick=df.global.cur_year_tick,events={},cultural_events={},
         source={df_version=dfhack.getDFVersion(),dfhack_version=dfhack.getDFHackVersion()},
@@ -121,6 +126,7 @@ local function pump()
     local closed,reset,skipped=advance(runtime,df.global.cur_year,df.global.cur_year_tick)
     if reset then runtime=new_session(); index.stop(); closed={} end
     runtime.skipped_years=(runtime.skipped_years or 0)+(skipped or 0)
+    environment.observe(runtime)
     for _,year in ipairs(closed) do table.insert(runtime.pending,{year=year,kind='final'}) end
     index.start()
     local culture_ready=culture.scan()

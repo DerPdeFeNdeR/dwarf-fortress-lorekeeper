@@ -1,5 +1,22 @@
 """Local tellings, never a promotion of their subjects into local history."""
 from heard_stories import office_subject, storyteller_names
+from fortress_calendar import annual_prefix
+
+SMALL_YEARS = ('zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+               'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen',
+               'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty')
+
+
+def office_clauses(topic, fallback):
+    if not office_subject(topic):
+        return [[fallback]]
+    person = next(p['name'] for p in topic['participants']
+                  if p.get('role')=='subject' and p.get('reference_status')=='resolved' and p.get('name'))
+    office, entity = topic['office']['name'], topic['entity_name']
+    return [[person], [f'{verb} {office} {preposition} {entity}'
+        for verb,preposition in (('taking the office of','in'),('took the office of','in'),
+                                ('becoming','of'),('became','of'),('became','in'),
+                                ('becoming','in'))]]
 
 
 def collect(request):
@@ -39,6 +56,18 @@ def requirements(events):
             continue
         names = storyteller_names(event)
         teller = ' and '.join(names) if names else 'an unidentified storyteller'
-        sentence = f"In year {event['time']['year']}, {teller} told a story about {subject}."
-        required.append(dict(event_id=event['source_key'],kind='storytelling',sentence=sentence))
+        sentence = f"{annual_prefix(event['time'])}{teller} told a story about {subject}."
+        # Leave space after the organization name for its first-mention context.
+        year = topic.get('year', -1)
+        dated = office_subject(topic) and type(year) is int and year >= 0
+        topic_clause = subject.removesuffix(f' in year {year}') if dated else subject
+        clauses = [[f'{teller} {verb}' for verb in ('told a story about',
+                    'recounted a tale about', 'told a tale of', 'recounted the story of',
+                    'told the story of', 'recounted a story about', 'related a tale of',
+                    'told a story of', 'later told a story about')]] + office_clauses(topic, topic_clause)
+        if dated:
+            years = [str(year)] + ([SMALL_YEARS[year]] if year < len(SMALL_YEARS) else [])
+            clauses.append([f'{prefix} {value}' for value in years for prefix in ('year','in','of')])
+        required.append(dict(event_id=event['source_key'],kind='storytelling',
+                             sentence=sentence,clauses=clauses))
     return required

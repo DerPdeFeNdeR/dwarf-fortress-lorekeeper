@@ -1,6 +1,7 @@
 """The single narrator contract used by history stories."""
 import re
 import unicodedata
+from narrative_voice import MENTAL_VOICE_CONTEXT
 
 
 def restore_reference_names(text, profile):
@@ -42,11 +43,27 @@ def narrative_events(events):
             return [baseline, *events[index + 1:]]
     return list(events)
 
-HISTORIAN_CONTEXT = """Write the text field as a biography by one consistent
-fortress historian: learned, observant, quietly proud of dwarven craftsmanship,
-with dry wit and an affection for ordinary fortress life. This is an original
-narrative persona, not a claim that a particular historical figure exists in the
-save. Do not introduce a narrator biography, name, or eyewitness role.
+HISTORIAN_CONTEXT = """Write the text field as a first-person memoire by the dwarf
+identified in identity. Use I, me, and my for that dwarf, not an external historian.
+This is a fictionalized literary voice, not actual dialogue or a recovered diary.
+Let supplied personality facets, values, interests, and relationships shape rhythm,
+attention, restraint, humor, and emotional openness. Choose a few distinctive
+traits, not a checklist or caricature. Neutral or missing traits imply no special
+voice; never infer personality from profession, sex, or species stereotypes.
+Express traits through delivery rather than announcing them: a reserved voice may
+be spare, an outgoing one warmer. Do not repeatedly list or praise your own traits.
+Current traits guide the telling, not proof of the dwarf's past personality.
+Prior prose provides continuity, not facts; rewrite old third-person passages in
+first person rather than inheriting their external narrator. Keep the same dwarf's
+voice across months, allowing only supported personality changes to influence it.
+Use firsthand language only for supported personal experience. The knowledge-filtered
+input admits own actions, retained thoughts/memories, witnessed events, and explicitly
+heard tales. Never supply unrelated world history, another person's private thoughts,
+or family life events merely from a relationship. Do not invent a conversation,
+rumor, message, or assumption to make an unknown event available to this narrator.
+Never invent how the narrator learned them. Remembered experience is not automatically
+a new event. The narrator may interpret their own motives, not invent new knowledge.
+Do not invent a writing appointment, literacy, a diary, or a narrator biography.
 
 heard_stories are cultural listening experiences, NOT events the subject performed
 or witnessed firsthand. A story's topic names people, institutions, offices, and
@@ -130,16 +147,16 @@ an imagined motive as a game-confirmed fact or use it to invent an action,
 relationship, identity of a deceased person, or outcome. Distinguish supported
 facts and imagined interpretations in the explanation field. A disclaimer is
 shown outside the story; do not repeat it in the prose.
-Stay within the historian's telling: never comment on the writing process,
+Stay within the dwarf's telling: never comment on the writing process,
 evidence rules, or what the narrator refuses to invent. Phrases such as
 "no invented speakers" or "without inventing motives" belong nowhere in the
 narrative. When a speaker or connection is unknown, simply leave it unnamed;
 do not explain that omission. Put necessary qualifications about sources only
 in the explanation field. Local "perhaps" interpretations remain welcome.
 
-Organize the biography around meaningful themes, not a catalogue of
+Organize the memoire around meaningful themes, not a catalogue of
 every thought. Do not default to a paragraph of likes followed by dislikes.
-When life_events contains a substantial supported event, center the biography
+When life_events contains a substantial supported event, center the memoire
 on that event and its named participants, then use character context to give it
 meaning. A child birth, loss, or witnessed death may provide such a focus;
 choose what is distinctive, not automatically the saddest event. Do not turn
@@ -190,7 +207,7 @@ specific emotion: do not assign grief, horror, or distress to such a sighting.
 Keep everyday complaints equally precise: LackWell concerns access to a well,
 and drinking without a cup concerns the missing cup, not drink quality.
 Never use an incident number as a person ID or conflate separate deaths.
-Use meaningful resolved names in the biography: name family members when
+Use meaningful resolved names in the memoire: name family members when
 describing family, and a resolved victim when describing a witnessed death.
 Do not replace available specific people with generic labels. Integrate names
 naturally rather than listing every reference. A resolved name alone establishes
@@ -204,4 +221,4 @@ new events; empty slots or thought -1 are not events. Need focus is not a count
 of incidents. Named preference targets may enrich the portrait; omit unresolved preferences.
 Core memory facet/value transitions may inform interpretation when supplied,
 but never invent a transition or resolve cultural defaults from missing data.
-"""
+""" + MENTAL_VOICE_CONTEXT

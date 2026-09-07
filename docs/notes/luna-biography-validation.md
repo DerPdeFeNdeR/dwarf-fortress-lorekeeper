@@ -1,4 +1,4 @@
-# Luna biography trial — 2026-09-06
+# Luna memoire trial — 2026-09-06
 
 The user requested `gpt-5.6-luna` after observing working automatic refresh.
 The former worker omitted model/effort flags and inherited local
@@ -12,7 +12,7 @@ between Luna and nano. The exact requested Luna model is retained, with the same
 historian prompt, JSON schema, authenticated Codex path, sandbox, and timeout.
 No API credentials, new billing path, or silent fallback model were introduced.
 
-Biography cache identity now includes model, reasoning effort, and historian
+Memoire cache identity now includes model, reasoning effort, and historian
 prompt content. Prepared status
 records `generation` for the request and `story_generation` for successfully
 generated prose. Old unlabelled stories are not retroactively assigned a model.
@@ -28,7 +28,7 @@ controlled latency distribution or a general speed guarantee.
 
 Reviewed output used concrete animal-body references and an explicitly tentative
 internal motive. It did not conflate seeing bodies with witnessing death in the
-biography itself. It omitted family detail from the short narrative; the user
+memoire itself. It omitted family detail from the short narrative; the user
 still needs to judge narrative quality and preferred emphasis in-game.
 
 The installed watcher was restarted to activate the defaults and a fresh

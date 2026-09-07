@@ -1,8 +1,8 @@
-# Unit-sheet biography entry — 2026-09-06
+# Unit-sheet memoire entry — 2026-09-06
 
 `lorekeeper/overlay.lua` exports the module-loadable overlay
 `lorekeeper/overlay.biography`. It defaults enabled with a movable 27x3 panel at
-{x=2,y=6}, separate from the vanilla unit pane. Its Read biography label supports
+{x=2,y=6}, separate from the vanilla unit pane. Its Read memoire label supports
 both clicks and Ctrl+L. Focus is restricted to `dwarfmode/ViewSheets/UNIT` and
 the active predicate excludes closed sheets, invalid IDs, and customization.
 
@@ -34,7 +34,7 @@ framework-supported but has not been retested for this new widget.
 ## In-game test
 
 No restart required in this development session: the overlay has been rescanned.
-Close the biography reader with Escape, leaving the vanilla unit sheet open.
+Close the memoire reader with Escape, leaving the vanilla unit sheet open.
 Find the Lorekeeper panel near the upper-left and click Read biography. Check the
 name matches the unit sheet. Close it, select another dwarf, and try Ctrl+L.
 Check the panel disappears when the unit sheet is closed and does not interfere

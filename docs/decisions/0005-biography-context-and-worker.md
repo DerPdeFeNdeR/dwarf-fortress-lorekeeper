@@ -1,4 +1,4 @@
-# ADR-005: Bounded biography context and asynchronous Luna worker
+# ADR-005: Bounded memoire context and asynchronous Luna worker
 
 Date: 2026-09-06
 Status: Accepted for the current development checkpoint
@@ -7,7 +7,7 @@ Status: Accepted for the current development checkpoint
 
 Generic thought summaries lacked named people and meaningful personal context.
 Full history/model work must not block the game. The user verified richer
-biographies, Unicode names, automatic refresh, and accepted Luna's current quality
+memoires, Unicode names, automatic refresh, and accepted Luna's current quality
 and approximately 11-second generation samples before moving to a friendly reader.
 
 ## Decision
@@ -18,7 +18,7 @@ explicit unsupported/missing states. Keep raw profiles separate from small view
 requests. Python prepares timeline pages and compact story input outside DFHack.
 
 Use explicit `gpt-5.6-luna` / low reasoning in the existing authenticated Codex
-worker, independently of interactive coding settings. Biography cache identity
+worker, independently of interactive coding settings. Memoire cache identity
 includes semantic input, schema, model, effort, and historian prompt. Keep prior
 stories readable while new work is pending; poll bounded status once per second
 in the open window, including while paused. Preserve full diagnostic timelines.

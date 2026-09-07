@@ -47,7 +47,7 @@ Optional worker environment settings are `LOREKEEPER_MODEL` and
 require no environment setup or changes to your personal Codex configuration.
 The separate HTTP prototype above retains its own default.
 
-Biography caches include model and reasoning settings. Existing biographies stay
+Memoire caches include model and reasoning settings. Existing memoires stay
 readable; reopening `lorekeeper/history/show` requests preparation with the active
 settings. The window updates automatically, even while DF is paused. No game
 restart is needed for a worker-model change. Legacy token-translation queue

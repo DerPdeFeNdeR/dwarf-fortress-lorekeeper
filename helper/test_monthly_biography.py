@@ -19,7 +19,7 @@ class MonthlyBiographyTests(unittest.TestCase):
         self.directory = Path(self.root.name)
         self.records = [record(10, 0)]
         self.state = dict(request=dict(unit_id=1, year=102, tick=120000), revision='revision',
-                          generation={}, timings={}, story='Legacy biography')
+                          generation={}, timings={}, story='Legacy memoire')
         self.payload = dict(identity=dict(id=1, name='Elda ò'), biography_profile={}, events=[],
                             historical_episodes=dict(events=[]), life_events=dict(events=[]), heard_stories=[])
         self.calls = []
@@ -82,6 +82,23 @@ class MonthlyBiographyTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertEqual([c['key'] for c in self.state['chapters']], ['intro'])
 
+    def test_weather_reference_alone_does_not_rewrite_or_create_a_chapter(self):
+        self.run_book()
+        self.state['request']['environment']=dict(file='new-weather-log',bytes=999)
+        self.run_book()
+        self.assertEqual(len(self.calls),1)
+        self.assertEqual(self.state['biography_update']['reason'],'no_significant_developments')
+
+    def test_writer_upgrade_revises_once_and_keeps_old_revision(self):
+        with patch('monthly_biography.HISTORIAN_CONTEXT','Old third-person historian'):
+            self.run_book()
+        old=self.state['chapters'][0]['file']
+        self.run_book()
+        self.assertEqual(len(self.calls),2)
+        self.assertTrue((self.directory/old).exists())
+        self.run_book()
+        self.assertEqual(len(self.calls),2)
+
     def test_one_chapter_per_pass_and_same_month_replaced(self):
         self.payload['historical_episodes']['events'] = [self.event()]
         self.run_book()
@@ -126,6 +143,17 @@ class MonthlyBiographyTests(unittest.TestCase):
         self.run_book()
         self.assertEqual(len(list(self.directory.glob('*.monthly-archive.*.json'))), 1)
         self.assertEqual(len(self.calls), 2)
+
+    def test_old_knowledge_book_is_archived_without_seeding_new_prose(self):
+        self.run_book()
+        path = self.directory / '1.monthly-book.json'
+        book = read_json(path)
+        book['version'] = 1
+        write_results(path, book)
+        self.run_book()
+        self.assertEqual(len(self.calls), 2)
+        self.assertEqual(len(list(self.directory.glob('*.monthly-archive.*.json'))), 1)
+        self.assertNotIn('Elda ò found much to ponder.', json.dumps(self.calls[-1], ensure_ascii=False))
 
     def test_same_story_next_month_is_not_new_chapter(self):
         self.payload['heard_stories'] = [dict(subject_key='history_event:9',
@@ -173,6 +201,7 @@ class MonthlyBiographyTests(unittest.TestCase):
         state=read_json(views/'1.json')
         self.assertEqual(state['state'],'processing',state.get('error'))
         self.assertEqual(state['chapters'][0]['key'],'intro')
+        self.assertRegex(state['story'], r'\b(I|my|My)\b')
         print('Introduction generation seconds:',state['timings']['generation_seconds'],flush=True)
         process_views(save)
         state=read_json(views/'1.json')
@@ -181,6 +210,7 @@ class MonthlyBiographyTests(unittest.TestCase):
         self.assertEqual([c['key'] for c in state['chapters']],['intro','000102-01'])
         chapter=read_json(views/state['chapters'][1]['file'])
         self.assertNotIn('\n',chapter['text'])
+        self.assertRegex(chapter['text'], r'\b(I|my|My)\b')
         print('Monthly generation seconds:',state['timings']['generation_seconds'],flush=True)
         write_results(views/'1.request.json',dict(request,nonce=2))
         with patch('history_view.run_batch') as model:

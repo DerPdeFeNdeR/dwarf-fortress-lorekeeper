@@ -106,7 +106,7 @@ class BiographyUpdateTests(unittest.TestCase):
             with patch('history_view.run_batch') as model:
                 process_views(save)
                 model.assert_not_called()
-            print('Live biography timing:', {'initial_seconds': initial['timings']['generation_seconds'],
+            print('Live memoire timing:', {'initial_seconds': initial['timings']['generation_seconds'],
                   'append_seconds': continued['timings']['generation_seconds']}, flush=True)
 
     def test_process_reuses_and_appends_then_preserves_success_on_failure(self):

@@ -72,7 +72,7 @@ class ChronicleTests(unittest.TestCase):
             write_results(directory/'a.request.json',data)
             with patch('chronicles.run_batch',return_value={'results':[dict(text='A pleasant year.')]}) as model:
                 process_chronicles(save); process_chronicles(save)
-                self.assertEqual(model.call_count,1)
+                self.assertEqual(model.call_count,2)
             self.assertEqual(load_results(directory/(chapter_key(data)+'.chapter.json'))['state'],'failed')
 
     def test_explicit_retry_can_recover_a_failed_final(self):

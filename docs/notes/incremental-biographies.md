@@ -1,4 +1,4 @@
-# Incremental biographies
+# Incremental memoires
 
 Date: 2026-09-06. Story schema 17; profile schema remains 5.
 
@@ -10,7 +10,7 @@ the DF thread. The existing reader displays the saved story during updates.
 
 - Equivalent semantic evidence reuses the story, with no model request.
 - A deterministic significance filter defers routine updates without calling the
-  model. The reader reports "No significant new developments. Saved biography
+  model. The reader reports "No significant new developments. Saved memoire
   unchanged." Prepared timeline data remains current; the story revision and
   written-evidence checkpoint do not advance, so deferred changes accumulate.
 - Compatible new timeline events / newly occurring indexed episodes can append
@@ -97,7 +97,7 @@ Run the opt-in test from `helper/` with:
 `LOREKEEPER_LIVE_BIOGRAPHY_TEST=1 PYTHONDONTWRITEBYTECODE=1 TMPDIR=/dev/shm python3 -m unittest test_biography_updates.BiographyUpdateTests.test_live_model_initial_continuation_and_cache`
 
 In-game acceptance is pending. After restarting only the watcher, open Read
-biography for a dwarf (the first schema-17 request may rebuild once). Reopen while
+memoire for a dwarf (the first schema-17 request may rebuild once). Reopen while
 paused to check immediate reuse. Play with collection active, then reopen after
 meaningful changes: a compatible update should preserve earlier paragraphs and add
 new ones. Changed references may intentionally produce a fresh edition instead.

@@ -27,6 +27,110 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local atmosphere=reqscript('lorekeeper/environment')
+assert_true(atmosphere.should_sample(nil,100) and not atmosphere.should_sample(100,100),
+    'environment samples once while game time is paused')
+assert_true(not atmosphere.should_sample(100,219) and atmosphere.should_sample(100,220),
+    'environment sampling is bounded by game ticks')
+assert_true(atmosphere.should_sample(220,100), 'environment detects backward observation time')
+assert_true(not atmosphere.should_record({weather='Rain',time=100},'Rain',1299)
+    and atmosphere.should_record({weather='Rain',time=100},'Rain',1300),
+    'environment emits daily checkpoints without repeated unchanged rows')
+assert_true(atmosphere.should_record({weather='Rain',time=100},'Snow',220),
+    'environment records precipitation changes')
+local event_method=reqscript('lorekeeper/event_method')
+local detail_lookups=0
+local method_event={id=7,death_cause=df.death_type.DROWN,weapon={
+    item_type=df.item_type.AMMO,item_subtype=0,item=10,
+    shooter_item_type=df.item_type.WEAPON,shooter_item_subtype=0,shooter_item=11}}
+function method_event:getType() return df.history_event_type.HIST_FIGURE_DIED end
+local function find_method(id) detail_lookups=detail_lookups+1; return method_event end
+local method=event_method.capture({id=7,kind='death'},find_method,
+    function(raw) return raw.role=='launcher' and 'crossbow' or 'bolt' end)
+assert_true(detail_lookups==1 and method.death_cause=='DROWN' and #method.weapons==2
+    and method.weapons[1].name=='bolt' and method.weapons[2].name=='crossbow',
+    'event methods resolve one exact event and separate impact item from launcher')
+assert_true(event_method.capture({id=8,kind='death'},find_method).status=='unavailable',
+    'method lookup rejects an unrelated event identity')
+assert_true(event_method.capture({id=7,kind='wounding'},find_method).status=='wrong_event_type',
+    'method lookup rejects the wrong event type')
+method=event_method.capture({id=7,kind='death'},find_method,function() error('unsupported') end)
+assert_true(method.weapons[1].status=='unavailable' and method.weapons[1].name==nil,
+    'unsupported weapon resolution does not fabricate a description')
+detail_lookups=0
+assert_true(event_method.capture({id=7,kind='battle'},find_method)==nil and detail_lookups==0,
+    'unrelated events do no method lookup')
+local narrator=reqscript('lorekeeper/narrator')
+local eventful={{id=1,year=102,site_id=745},{id=1,year=102,site_id=745},
+    {id=2,year=101,site_id=745},{id=3,year=102,site_id=999}}
+assert_true(narrator.weight(eventful,102,745)==2 and narrator.weight({},102,745)==1,
+    'narrator weights unique local year events and retains quiet citizens')
+for i=4,20 do table.insert(eventful,{id=i,year=102,site_id=745}) end
+assert_true(narrator.weight(eventful,102,745)==9,'narrator event bonus is bounded')
+local selection={count=0,total=0}
+narrator.consider(selection,1,1,function() return 1 end)
+narrator.consider(selection,2,9,function(total) return total end)
+assert_true(selection.chosen==1 and selection.total==10 and selection.count==2,
+    'weighted narrator draw does not always choose the most eventful dwarf')
+narrator.consider(selection,3,9,function() return 1 end)
+assert_true(selection.chosen==3,'weighted narrator draw can select another citizen')
+local saved_voice=require('json').encode({version=1,status='selected',year=102,site_id=745,
+    histfig_id=7,name='Test dwarf',personality_facets={HUMOR=80},values={},
+    mental_attributes={version=1,status='unavailable',attributes={}}})
+local function never_write() error('Persisted narrator must not be replaced') end
+local function read_voice() return saved_voice end
+local first_voice=narrator.for_year('unused',102,745,{},never_write,read_voice)
+local second_voice=narrator.for_year('unused',102,745,{},never_write,read_voice)
+assert_true(first_voice.histfig_id==7 and second_voice.personality_facets.HUMOR==80,
+    'saved annual narrator and voice survive draft retry and reload without selection')
+local ok=pcall(narrator.for_year,'unused',103,745,{},never_write,read_voice)
+assert_true(not ok,'wrong-year narrator is rejected rather than silently reused')
+ok=pcall(narrator.for_year,'unused',102,745,{},never_write,function() return '{broken' end)
+assert_true(not ok,'corrupt saved narrator is not randomly replaced')
+assert_true(narrator.traits({traits={HUMOR=80,ORDERLINESS=30}}).HUMOR==80 and
+    next(narrator.traits(nil))==nil,'bounded voice capture handles missing personality')
+assert_true(narrator.displayed_voice({story='Older external account',narrator={name='New dwarf'}})==nil,
+    'pending memoire never attributes older external prose to the new narrator')
+assert_true(narrator.displayed_voice({story='Saved account',story_narrator={name='Original dwarf'},
+    narrator={name='Requested dwarf'}}).name=='Original dwarf',
+    'display attribution belongs to the published story, not pending work')
+assert_true(narrator.relative_attribute(500,1000)=='lower' and
+    narrator.relative_attribute(1000,1000)=='typical' and narrator.relative_attribute(1500,1000)=='higher',
+    'mental voice bands compare each attribute with its caste baseline')
+assert_true(narrator.relative_attribute(1500,2000)=='typical' and
+    narrator.relative_attribute(1000,nil)=='unknown','missing baselines are not guessed')
+local mental_calls=0
+local mental=narrator.mental_attributes({status={current_soul={}}},function(_,name)
+    mental_calls=mental_calls+1
+    if name=='MEMORY' then error('unavailable') end
+    return 1500,1000
+end)
+assert_true(mental_calls==4 and mental.status=='partial' and
+    mental.attributes.LINGUISTIC_ABILITY.relative_level=='higher' and mental.attributes.MEMORY==nil,
+    'mental capture uses four bounded reads and reports unsupported attributes')
+assert_true(narrator.mental_attributes(nil).status=='unavailable',
+    'missing soul does not fabricate mental attributes')
+local old_voice={status='selected',histfig_id=7,name='Original'}
+assert_true(narrator.add_missing_mental_attributes(old_voice,{hist_figure_id=8}) and
+    old_voice.histfig_id==7 and old_voice.mental_attributes.status=='unavailable',
+    'voice upgrade preserves narrator and rejects a reused unit identity')
+assert_true(not narrator.add_missing_mental_attributes(old_voice,nil),
+    'mental voice enrichment is saved once rather than recaptured on refresh')
+local stored_companion,companion_writes=nil,0
+local legacy=require('json').encode({version=1,status='selected',year=102,site_id=745,
+    histfig_id=7,name='Original',personality_facets={HUMOR=80},values={}})
+local function companion_read(path)
+    if path:find('.mental.json',1,true) then return stored_companion end
+    return legacy
+end
+local function companion_write(data,name)
+    assert(name=='745-102.narrator.mental.json','Original narrator must never be overwritten')
+    companion_writes=companion_writes+1; stored_companion=require('json').encode(data)
+end
+local upgraded=narrator.for_year('unused',102,745,{},companion_write,companion_read)
+local reused=narrator.for_year('unused',102,745,{},companion_write,companion_read)
+assert_true(companion_writes==1 and upgraded.histfig_id==7 and reused.mental_attributes.status=='unavailable',
+    'legacy narrator enrichment uses one immutable companion and preserves original identity')
 local culture=reqscript('lorekeeper/culture_index')
 local cultural_index=culture.new(745,0)
 local telling={id=1,site=745,event_year=102,event_time=10,type=df.incident_type.Performance,
@@ -44,7 +148,7 @@ assert_true(#cultural_index.years[102]==256 and #cultural_selected==4 and cultur
     'culture index bounds retention and annual selection')
 local chapter_list={{key='intro'},{key='000102-03'},{key='000101-11'}}
 assert_true(reader_text.selected_chapter(chapter_list).key=='intro',
-    'biography opens on introduction by default')
+    'memoire opens on introduction by default')
 assert_true(reader_text.selected_chapter(chapter_list,'000102-03').key=='000102-03',
     'background refresh preserves explicitly selected month')
 assert_true(reader_text.selected_chapter({{key='000102-03'}},'intro')==nil,
@@ -77,7 +181,7 @@ local office=storytelling.position_definition({positions={own={{id=7,name={[0]='
 assert_true(office.name=='copper voice' and office.definition_observed_now,
     'story office resolves by definition ID without inferring a historical location')
 assert_true(reader_text.status({state='ready',biography_update={mode='defer'}},nil,true,nil)==
-    'No significant new developments. Saved biography unchanged.',
+    'No significant new developments. Saved memoire unchanged.',
     'reader explains deferred routine developments without claiming a new story')
 local annual_state={year=101,time=101*403200+400000}
 local closed=chronicle.advance(annual_state,102,10)
@@ -159,18 +263,18 @@ for i=1,129 do table.insert(contacts,{histfig_id=i,core={love=0}}) end
 local _,friend_limits=friends.capture(contacts,references.new({}))
 assert_true(#friend_limits==1,'friendship capture bounds contact scanning')
 assert_true(biography_overlay.eligible({open=true,active_sheet=0,active_id=7},0),
-    'biography button is eligible on an open unit sheet')
+    'memoire button is eligible on an open unit sheet')
 assert_true(not biography_overlay.eligible({open=false,active_sheet=0,active_id=7},0) and
     not biography_overlay.eligible({open=true,active_sheet=1,active_id=7},0),
-    'biography button excludes closed and non-unit sheets')
+    'memoire button excludes closed and non-unit sheets')
 assert_true(not biography_overlay.eligible({open=true,active_sheet=0,active_id=-1},0) and
     not biography_overlay.eligible({open=true,active_sheet=0,active_id=7,unit_overview_customizing=true},0),
-    'biography shortcut is inactive during customization or invalid selection')
+    'memoire shortcut is inactive during customization or invalid selection')
 local reader_request={unit_id=7,year=102,tick=123,nonce=456}
 local reader_data={state='ready',request=reader_request,story='A quiet life.\n\nA lasting memory.',
     record_count=50,event_count=34}
 assert_true(not reader_text.pending(reader_data,reader_request),
-    'reader recognizes the completed requested biography')
+    'reader recognizes the completed requested memoire')
 assert_true(reader_text.pending(reader_data,{unit_id=7,year=102,tick=123,nonce=457}),
     'reader distinguishes an older ready result from a pending update')
 assert_true(table.concat(reader_text.lines(reader_data,68),'\n')==reader_data.story,
@@ -184,15 +288,15 @@ assert_true(reader_text.status(reader_data,reader_request,true):find('failed',1,
     reader_text.lines(reader_data,68)[1]=='A quiet life.',
     'reader retains saved prose after failed generation')
 assert_true(reader_text.status(reader_data,reader_request,false):find('offline',1,true)~=nil,
-    'reader explains offline status without hiding saved biographies')
-assert_true(reader_text.status(nil,reader_request,true):find('preparing',1,true)~=nil and
+    'reader explains offline status without hiding saved memoires')
+assert_true(reader_text.status(nil,reader_request,true)=='Preparing this Memoire...' and
     table.concat(reader_text.lines(nil,68),' '):find('keep playing',1,true)~=nil,
     'reader explains first-generation waiting without technical clutter')
 local overview = profile.quick_overview({status={}})
-assert_true(#overview == 2 and overview[1]:find('not a generated biography', 1, true) ~= nil,
+assert_true(#overview == 2 and overview[1]:find('not a generated memoire', 1, true) ~= nil,
     'shows an immediate factual fallback without requiring a model')
 assert_true(#display_text.wrap('') == 1 and display_text.wrap('')[1] == '',
-    'preserves an explicit biography-to-timeline spacer')
+    'preserves an explicit memoire-to-timeline spacer')
 assert_true(profile.reference_kind('Death') == 'historical_figure' and
     profile.reference_kind('UnexpectedDeath') == 'historical_figure',
     'resolves verified death thought reference types')
