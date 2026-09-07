@@ -7,6 +7,8 @@ local policy = reqscript('lorekeeper/policy')
 local glossary = reqscript('lorekeeper/glossary')
 local translation = reqscript('lorekeeper/translation')
 local display_text = reqscript('lorekeeper/display_text')
+local profile = reqscript('lorekeeper/profile')
+local references = reqscript('lorekeeper/references')
 
 local passed = 0
 
@@ -19,6 +21,51 @@ local function assert_true(condition, description)
 end
 
 local paragraphs = display_text.wrap('First paragraph.\n\nLater records.')
+local overview = profile.quick_overview({status={}})
+assert_true(#overview == 2 and overview[1]:find('not a generated biography', 1, true) ~= nil,
+    'shows an immediate factual fallback without requiring a model')
+assert_true(#display_text.wrap('') == 1 and display_text.wrap('')[1] == '',
+    'preserves an explicit biography-to-timeline spacer')
+assert_true(profile.reference_kind('Death') == 'historical_figure' and
+    profile.reference_kind('UnexpectedDeath') == 'historical_figure',
+    'resolves verified death thought reference types')
+assert_true(profile.reference_kind('WitnessDeath') == 'incident' and
+    profile.reference_kind('SawDeadBody') == 'incident',
+    'does not confuse incident references with historical figures')
+local lookups = 0
+local resolver = references.new({unit=function(id)
+    lookups=lookups+1; return {name='Victim', histfig_id=id+1}
+end, incident=function(id, _, resolve)
+    local victim = resolve('unit', 8421)
+    return {victim_name=victim.details.name, victim_reference=victim.key}
+end}, 4)
+local incident = resolver:resolve('incident', 141)
+resolver:resolve('unit', 8421)
+assert_true(incident.details.victim_name == 'Victim' and lookups == 1,
+    'resolves incident victims with deduplicated typed lookups')
+assert_true(resolver:resolve('unknown', 141).status == 'unsupported_type' and
+    resolver:resolve('unit', -1).status == 'invalid_id',
+    'retains explicit unsupported and invalid reference statuses')
+assert_true(resolver:resolve('unit', 99).status == 'budget_exhausted',
+    'caps reference resolution work')
+local missing = references.new({unit=function() return nil end,
+    item=function() error('unsupported layout') end})
+assert_true(missing:resolve('unit', 1).status == 'missing' and
+    missing:resolve('item', 1).status == 'lookup_error',
+    'distinguishes missing objects from unsupported layouts')
+local targets = references.preference_targets({creature_id=4, color_id=7}, 'LikeColor')
+assert_true(#targets == 1 and targets[1].kind == 'color' and targets[1].id == 7,
+    'resolves only active preference union fields')
+local typed = references.new({unit=function() return {name='Unit'} end,
+    historical_figure=function() return {name='Figure'} end})
+assert_true(typed:resolve('unit', 1).details.name ~= typed:resolve('historical_figure', 1).details.name,
+    'keeps identical numeric IDs in different namespaces distinct')
+local chain = references.new({unit=function(id, _, resolve)
+    return {next=resolve('unit', id+1).status}
+end})
+chain:resolve('unit', 1)
+assert_true(#chain.records == 4 and chain.records[4].status == 'depth_exceeded',
+    'bounds nested reference traversal')
 assert_true(table.concat(display_text.wrap('Minkot Udistatír—a “small” comfort…', 100), '\n') ==
     dfhack.utf2df('Minkot Udistatír -- a "small" comfort...'),
     'renders Unicode punctuation without damaging accented names')

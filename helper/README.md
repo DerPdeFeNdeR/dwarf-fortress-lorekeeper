@@ -40,6 +40,19 @@ separate so the DFHack render loop never waits on a network request.
 
 ## Codex CLI batch backend
 
+The Codex worker defaults to `gpt-5.6-luna` with `low` reasoning, passed explicitly
+on each invocation. It does not inherit your interactive Codex model/effort.
+Optional worker environment settings are `LOREKEEPER_MODEL` and
+`LOREKEEPER_REASONING_EFFORT`; restart the watcher after changing them. Defaults
+require no environment setup or changes to your personal Codex configuration.
+The separate HTTP prototype above retains its own default.
+
+Biography caches include model and reasoning settings. Existing biographies stay
+readable; reopening `lorekeeper/history/show` requests preparation with the active
+settings. The window updates automatically, even while DF is paused. No game
+restart is needed for a worker-model change. Legacy token-translation queue
+entries already cached by request ID are retained, not regenerated in bulk.
+
 If Codex CLI is already authenticated with ChatGPT, queued translations can
 be processed without an API key. Put a JSON array of pending items in a file:
 

@@ -4,11 +4,12 @@ import unittest
 import sys
 from pathlib import Path
 from unittest.mock import patch
-from history_view import VIEW_SCHEMA_VERSION, build_timeline, process_views
+from history_view import VIEW_SCHEMA_VERSION, build_timeline, process_views, load_profile, profile_revision
 from process_queue import load_queue, load_results, process_queue, write_results
 from codex_batch import run_process
 from worker_runtime import worker_runtime
-from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events
+from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events, restore_reference_names
+from story_input import compact_profile, build_story_input, story_key
 
 
 def record(tick, stress):
@@ -18,6 +19,52 @@ def record(tick, stress):
 
 
 class HistoryViewTests(unittest.TestCase):
+    def test_historian_keeps_writing_process_commentary_out_of_narrative(self):
+        self.assertIn('never comment on the writing process', HISTORIAN_CONTEXT)
+        self.assertIn('do not explain that omission', HISTORIAN_CONTEXT)
+    def test_reference_names_restore_accents_without_guessing_ambiguous_names(self):
+        profile = dict(figures=[dict(name='Tirist Sobìrrith')])
+        self.assertEqual(restore_reference_names('Tirist Sobîrrith smiled.', profile),
+                         'Tirist Sobìrrith smiled.')
+        profile['figures'].append(dict(name='Tirist Sobírrith'))
+        self.assertEqual(restore_reference_names('Tirist Sobîrrith smiled.', profile),
+                         'Tirist Sobîrrith smiled.')
+    def test_profile_reader_is_bounded_and_checks_identity(self):
+        with tempfile.TemporaryDirectory() as root:
+            directory = Path(root)
+            request = dict(unit_id=1, profile_file='1.profile.json')
+            write_results(directory / request['profile_file'], dict(unit_id=1))
+            self.assertEqual(load_profile(directory, request)['unit_id'], 1)
+            with self.assertRaises(ValueError):
+                load_profile(directory, dict(unit_id=2, profile_file=request['profile_file']))
+            with self.assertRaises(ValueError):
+                load_profile(directory, dict(unit_id=1, profile_file='../1.profile.json'))
+            (directory / request['profile_file']).write_bytes(b' ' * 131073)
+            with self.assertRaises(ValueError):
+                load_profile(directory, request)
+
+    def test_profile_revision_ignores_capture_time_but_not_relationships(self):
+        a = dict(unit_id=1, captured_at=dict(tick=1), relationships=[])
+        b = dict(a, captured_at=dict(tick=2))
+        self.assertEqual(profile_revision('base', a), profile_revision('base', b))
+        b['relationships'] = [dict(target_hf=7068, kind='spousest')]
+        self.assertNotEqual(profile_revision('base', a), profile_revision('base', b))
+
+    def test_profile_reaches_model_with_resolved_spouse_context(self):
+        with tempfile.TemporaryDirectory() as root:
+            save = Path(root)
+            views = save / 'lorekeeper-views'
+            profile = dict(unit_id=1, figures=[dict(id=7068, name='Momuz Lilumuzol')],
+                           relationships=[dict(target_hf=7068, kind='histfig_hf_link_spousest')])
+            write_results(views / '1.profile.json', profile)
+            write_results(views / '1.request.json', dict(unit_id=1, profile_file='1.profile.json'))
+            (save / 'lorekeeper-history.jsonl').write_text(json.dumps(record(1, 0)) + '\n')
+            def generate(items, **kwargs):
+                self.assertEqual(json.loads(items[0]['raw'])['biography_profile'], compact_profile(profile))
+                return {'results': [dict(id=items[0]['id'], text='A biography.') ]}
+            with patch('history_view.run_batch', side_effect=generate):
+                process_views(save)
+            self.assertEqual(load_results(views / '1.json')['state'], 'ready')
     def test_historian_contract_preserves_tone_and_factual_boundaries(self):
         for instruction in ('one consistent', 'dry wit', 'gravity and compassion',
                             'Preserve Unicode names exactly', 'Never invent dialogue',
@@ -80,12 +127,12 @@ class HistoryViewTests(unittest.TestCase):
             views = save / 'lorekeeper-views'
             request = dict(unit_id=1, year=102, tick=5)
             write_results(views / '1.request.json', request)
-            write_results(views / '1.json', dict(request=request, state='ready',
+            write_results(views / '1.json', dict(request=dict(request, nonce=0), state='ready',
                           revision='old', story_revision='old', story='Old story', updated_at=10**12))
             source = save / 'lorekeeper-history.jsonl'
             contents = ''.join(json.dumps(r) + '\n' for r in [record(20, 0), record(5, -100)])
             source.write_text(contents)
-            def generate(items):
+            def generate(items, **kwargs):
                 payload = json.loads(items[0]['raw'])
                 self.assertEqual(items[0]['context'], HISTORIAN_CONTEXT)
                 self.assertEqual(payload['schema_version'], VIEW_SCHEMA_VERSION)
@@ -159,7 +206,7 @@ class HistoryViewTests(unittest.TestCase):
             views=save/'lorekeeper-views'
             write_results(views/'1.request.json',dict(unit_id=1,year=102,tick=3))
             (save/'lorekeeper-history.jsonl').write_text(json.dumps(record(1,0))+'\n')
-            def generate(items):
+            def generate(items, **kwargs):
                 self.assertTrue(list(views.glob('1.*.0.json')))
                 self.assertEqual(load_results(views/'1.json')['state'],'processing')
                 return {'results':[dict(id=items[0]['id'],text='Test ò was a miner.')]}

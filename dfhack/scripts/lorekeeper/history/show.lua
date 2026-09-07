@@ -14,6 +14,7 @@ function LorekeeperHistoryWindow:init()
     if unit then
         self.unit_id = unit.id
         self.name = dfhack.units.getReadableName(unit, true)
+        self.overview = reqscript('lorekeeper/profile').quick_overview(unit)
         self.request_ok, self.request_error = requests.request(self.unit_id)
     end
     self:addviews{
@@ -32,7 +33,23 @@ function LorekeeperHistoryWindow:init()
     self:refresh()
 end
 
-function LorekeeperHistoryWindow:refresh()
+function LorekeeperHistoryWindow:onRenderFrame(dc, rect)
+    self.super.onRenderFrame(self, dc, rect)
+    local now = dfhack.getTickCount()
+    if self.unit_id and now >= (self.next_check or 0) then
+        self.next_check = now + 1000
+        self:refresh(nil, true)
+    end
+end
+
+function LorekeeperHistoryWindow:refresh(_, automatic)
+    local data = self.unit_id and requests.read(self.unit_id)
+    local available = self.unit_id and requests.worker_available() or false
+    local signature = table.concat({tostring(data and data.state), tostring(data and data.updated_at),
+        tostring(data and data.story_revision), tostring(data and data.request and data.request.nonce),
+        tostring(data and data.error), tostring(available)}, '|')
+    if automatic and signature == self.display_signature then return end
+    self.display_signature = signature
     local choices = {}
     local function add(text)
         for _, line in ipairs(display_text.wrap(text)) do
@@ -43,13 +60,17 @@ function LorekeeperHistoryWindow:refresh()
         add('No unit is selected.')
     else
         table.insert(choices,{text='Name: ' .. self.name})
-        local data = requests.read(self.unit_id)
-        if not requests.worker_available() then add('Background watcher unavailable. Prepared history remains readable.') end
+        if not available then add('Background watcher unavailable. Prepared history remains readable.') end
         if not self.request_ok then add('Request failed: ' .. tostring(self.request_error)) end
+        if not data or not data.story then
+            for _, line in ipairs(self.overview or {}) do add(line) end
+            add('')
+        end
         if not data then
-            add('History queued. Waiting for the background watcher; press R to check.')
+            add('Biography queued. This window updates automatically; you can close it and return later.')
         else
             add('Status: ' .. data.state)
+            if data.state == 'processing' then add('Writing in the background; you can close this window and keep playing.') end
             if data.request and (data.request.year ~= df.global.cur_year or
                     data.request.tick ~= df.global.cur_year_tick) then
                 add(('Prepared for year %d, tick %d; later records may not be included.'):format(
@@ -59,6 +80,7 @@ function LorekeeperHistoryWindow:refresh()
                 if data.story_revision ~= data.revision then add('Previous story; newer history is being prepared.') end
                 if data.story_notice then add(data.story_notice); add('') end
                 add(data.story)
+                add('')
             end
             if data.error then add(data.error) end
             self.page = math.min(self.page, math.max(0,(data.pages or 1)-1))
@@ -68,7 +90,7 @@ function LorekeeperHistoryWindow:refresh()
             if page then for _,line in ipairs(page.lines) do add(line) end end
         end
     end
-    self.subviews.content:setChoices(choices)
+    self.subviews.content:setChoices(choices, self.subviews.content:getSelected())
 end
 
 function LorekeeperHistoryWindow:copy_history()

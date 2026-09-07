@@ -5,12 +5,37 @@ import time
 from collections import Counter
 from pathlib import Path
 
-from codex_batch import run_batch
+from codex_batch import run_batch, generation_settings
 from process_queue import load_queue, load_results, write_results, repair_story_names
-from historian import HISTORIAN_CONTEXT, STORY_NOTICE, narrative_events
+from historian import HISTORIAN_CONTEXT, STORY_NOTICE, restore_reference_names
+from story_input import build_story_input, story_key, stable_json
 
 _source_cache = {}
-VIEW_SCHEMA_VERSION = 7
+VIEW_SCHEMA_VERSION = 12
+
+
+def load_profile(directory, request):
+    name = request.get('profile_file')
+    if not name:
+        return None
+    if not isinstance(name, str) or '/' in name or '\\' in name or not name.endswith('.profile.json'):
+        raise ValueError('Invalid biography profile filename')
+    with (directory / name).open('rb') as source:
+        raw = source.read(131073)
+    if len(raw) > 131072:
+        raise ValueError('Biography profile exceeds 128 KiB')
+    profile = json.loads(raw.decode('utf-8'))
+    if not isinstance(profile, dict) or profile.get('unit_id') != request['unit_id']:
+        raise ValueError('Biography profile belongs to another dwarf')
+    return profile
+
+
+def profile_revision(revision, profile):
+    if profile is None:
+        return revision
+    # Request time alone should not trigger fresh model work.
+    context = {key: value for key, value in profile.items() if key != 'captured_at'}
+    return hashlib.sha256(json.dumps([revision, context], sort_keys=True).encode()).hexdigest()
 
 
 def time_key(record):
@@ -97,11 +122,12 @@ def prepare_view(save, unit_id):
 def process_views(save):
     directory = save / 'lorekeeper-views'
     latest = {}
+    jobs = []
     for path in sorted(directory.glob('*.request.json'), key=lambda p: p.stat().st_mtime_ns):
         prefix = path.name.split('.')[0]
         if prefix.isdigit():
             latest[prefix] = path
-    for request_path in latest.values():
+    for request_path in reversed(list(latest.values())):
         request = load_results(request_path)
         unit_id = request.get('unit_id')
         if not isinstance(unit_id, int) or unit_id < 0:
@@ -109,21 +135,35 @@ def process_views(save):
         output = directory / f'{unit_id}.json'
         previous = load_results(output)
         same_schema = previous.get('schema_version') == VIEW_SCHEMA_VERSION
+        if previous.get('request') == request and previous.get('state') in ('ready', 'empty'):
+            continue  # A schema deployment must not regenerate every dormant dwarf.
         if same_schema and previous.get('request') == request:
-            if previous.get('state') in ('ready', 'empty'):
-                continue
             if previous.get('state') == 'failed' and (
                     previous.get('attempts', 0) >= 3 or time.time() < previous.get('retry_at', 0)):
                 continue
-        if same_schema and previous.get('state') == 'ready' and time.time() - previous.get('updated_at', 0) < 30:
-            continue  # Coalesce rapid reopen requests without repeated model calls.
+        started_at = time.time()
+        preparation_start = time.perf_counter()
         records, events, revision = prepare_view(save, unit_id)
+        try:
+            profile = load_profile(directory, request)
+        except (OSError, ValueError) as error:
+            write_results(output, dict(state='failed', request=request,
+                                      error='Could not load biography profile: ' + str(error)))
+            continue
+        revision = profile_revision(revision, profile)
+        payload = build_story_input(records[-1]['snapshot']['identity'] if records else {}, events, profile)
+        settings = generation_settings()
+        semantic_key = story_key(payload, [VIEW_SCHEMA_VERSION, settings, HISTORIAN_CONTEXT])
         state = dict(schema_version=VIEW_SCHEMA_VERSION,
                      request=request, revision=revision, record_count=len(records),
                      event_count=len(events), state='processing', updated_at=time.time(),
                      story=previous.get('story'), story_revision=previous.get('story_revision'),
                      story_explanation=previous.get('story_explanation'),
-                     story_notice=previous.get('story_notice'))
+                     story_notice=previous.get('story_notice'),
+                     story_key=previous.get('story_key'),
+                     generation=settings, story_generation=previous.get('story_generation'),
+                     timings={'queue_seconds': max(0, started_at - request.get('nonce', started_at)),
+                              'generation_seconds': 0, 'cache_hit': False})
         state['attempts'] = previous.get('attempts', 0) if same_schema and previous.get('request') == request else 0
         # Pages stay bounded even for long histories. Publish before model work.
         for page, offset in enumerate(range(0, len(events), 20)):
@@ -141,41 +181,65 @@ def process_views(save):
                     lines.append(f"Stress: {event['from_stress']} to {event['to_stress']}")
             write_results(directory / f'{unit_id}.{revision}.{page}.json', {'lines': lines})
         state['pages'] = (len(events) + 19) // 20
+        state['timings']['preparation_seconds'] = time.perf_counter() - preparation_start
+        state['updated_at'] = time.time()
         if not records:
             state['state'] = 'empty'
             write_results(output, state)
             continue
-        if previous.get('story_revision') == revision:
+        if same_schema and previous.get('story_key') == semantic_key and previous.get('story'):
             state['state'] = 'ready'
+            state['story_revision'] = revision
+            state['timings']['cache_hit'] = True
+            state['timings']['total_seconds'] = time.time() - request.get('nonce', started_at)
             write_results(output, state)
             continue
         write_results(output, state)
         item = dict(id=f'history-v{VIEW_SCHEMA_VERSION}:{unit_id}:{revision}', kind='dwarf_history',
-                    raw=json.dumps({'schema_version': VIEW_SCHEMA_VERSION,
-                                    'identity': records[-1]['snapshot']['identity'],
-                                    'events': narrative_events(events)}),
+                    raw=stable_json(dict(payload, schema_version=VIEW_SCHEMA_VERSION)),
                     context=HISTORIAN_CONTEXT)
-        try:
-            if len(item['raw'].encode()) > 200000:
-                raise ValueError('History exceeds the current story size limit; timeline is available.')
-            result = run_batch([item])['results'][0]
-            repair_story_names([item], [result])
-            if len(result['text'].encode('utf-8')) > 8000:
-                raise ValueError('Generated story exceeds the display size limit.')
-            state.update(state='ready', story=result['text'], story_revision=revision,
-                         story_explanation=result.get('explanation', ''),
-                         story_notice=STORY_NOTICE)
-        except Exception as error:
-            state['attempts'] += 1
-            state.update(state='failed', error=str(error)[-500:],
-                         retry_at=time.time() + min(300, 15 * 2 ** state['attempts']))
-        state['updated_at'] = time.time()
-        write_results(output, state)
-        # Only generated superseded page/request files are disposable.
-        for page in directory.glob(f'{unit_id}.*.json'):
-            parts = page.name.split('.')
-            if len(parts) == 4 and len(parts[1]) == 64 and parts[2].isdigit() and parts[1] != revision:
-                page.unlink(missing_ok=True)
-        for old in directory.glob(f'{unit_id}.*.request.json'):
-            if old != request_path and old.stat().st_mtime_ns <= request_path.stat().st_mtime_ns:
-                old.unlink(missing_ok=True)
+        state['timings']['payload_bytes'] = len(item['raw'].encode('utf-8'))
+        jobs.append((request_path, output, state, item, profile, semantic_key))
+    # Publish every discovered timeline before waiting for any model call.
+    for job in jobs:
+        complete_story(*job)
+
+
+def complete_story(request_path, output, state, item, profile, semantic_key):
+    generation_start = time.perf_counter()
+    request = state['request']
+    state['timings']['model_queue_seconds'] = max(0, time.time() - state['updated_at'])
+    try:
+        if len(item['raw'].encode('utf-8')) > 200000:
+            raise ValueError('History exceeds the current story size limit; timeline is available.')
+        result = run_batch([item], settings=state['generation'])['results'][0]
+        repair_story_names([item], [result])
+        result['text'] = restore_reference_names(result['text'], profile)
+        if len(result['text'].encode('utf-8')) > 8000:
+            raise ValueError('Generated story exceeds the display size limit.')
+        state.update(state='ready', story=result['text'], story_revision=state['revision'],
+                     story_explanation=result.get('explanation', ''),
+                     story_notice=STORY_NOTICE, story_key=semantic_key,
+                     story_generation=state['generation'])
+    except Exception as error:
+        state['attempts'] += 1
+        state.update(state='failed', error=str(error)[-500:],
+                     retry_at=time.time() + min(300, 15 * 2 ** state['attempts']))
+    state['updated_at'] = time.time()
+    state['timings']['generation_seconds'] = time.perf_counter() - generation_start
+    state['timings']['total_seconds'] = state['updated_at'] - request.get('nonce', state['updated_at'])
+    write_results(output, state)
+    directory, unit_id, revision = output.parent, request['unit_id'], state['revision']
+    # Only generated superseded page/request files are disposable.
+    for page in directory.glob(f'{unit_id}.*.json'):
+        parts = page.name.split('.')
+        if len(parts) == 4 and len(parts[1]) == 64 and parts[2].isdigit() and parts[1] != revision:
+            page.unlink(missing_ok=True)
+    for old in directory.glob(f'{unit_id}.*.request.json'):
+        if old != request_path and old.stat().st_mtime_ns <= request_path.stat().st_mtime_ns:
+            old_profile = load_results(old).get('profile_file', '')
+            if (isinstance(old_profile, str) and old_profile.startswith(f'{unit_id}.')
+                    and old_profile.endswith('.profile.json')
+                    and '/' not in old_profile and '\\' not in old_profile):
+                (directory / old_profile).unlink(missing_ok=True)
+            old.unlink(missing_ok=True)

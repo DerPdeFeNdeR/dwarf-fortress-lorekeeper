@@ -17,6 +17,16 @@
   earlier segments in the technical timeline. Technical gaps and resets belong
   outside the narrative; do not make them events in the dwarf's life.
 - Primary UX requirement: when the player navigates to/selects a dwarf in Dwarf Fortress, the tool should open a dedicated DFHack UI window showing a readable summary of that dwarf's thoughts, personality, and related mental state. Keep the vanilla screen intact. In-place replacement of vanilla text is a possible later experiment, not the initial target.
+- Next agreed milestone: a player-facing, story-first biography reader, separate
+  from the technical `lorekeeper/history/show` view. Prioritize readable prose,
+  a secondary interpretation notice, simple update/details/close controls, and
+  automatic completion while keeping an older story readable. Build the reader
+  before adding a selected-dwarf-screen entry button. Do not expose ticks, raw
+  traits, or event counts by default in the player-facing reader.
+- The user accepted Luna with low reasoning and its roughly 11-second measured
+  generation time for now. Automatic in-game updates without R were verified.
+  Further model comparisons, no-reasoning trials, and speculative biography
+  pre-generation are deferred; do not silently enable them.
 
 ## Working assumptions
 
@@ -25,7 +35,14 @@
 - Do not overwrite or modify the user's DFHack installation from this repository unless explicitly requested. During development, use a documented copy/symlink/install step.
 - Account for DF/DFHack updates: keep a small compatibility layer and record the game/DFHack version with collected data.
 - Avoid storing only dwarf IDs. IDs can be useful within a world, but names, race, site/world identity, and timestamps should also be retained where available.
-- Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The initial cloud translation model is OpenAI `gpt-5-mini`; keep the model configurable for later benchmarking.
+- Translation should be asynchronous and cached. Never block the DF render loop on a network/model request, and never put an API key in the DFHack Lua script. The optional HTTP API prototype defaults to `gpt-5-mini`; the active Codex watcher explicitly defaults to `gpt-5.6-luna` with low reasoning.
+- Keep the worker's model and effort independent of interactive Codex defaults.
+  `LOREKEEPER_MODEL` and `LOREKEEPER_REASONING_EFFORT` configure its invocation;
+  never change the user's personal Codex config for Lorekeeper. Biography cache
+  keys include both settings and the historian prompt. Save requested generation settings separately from
+  the provenance of the displayed story; failed replacements keep old prose.
+  Reopening requests a new model version, not a bulk regeneration of dormant
+  biographies. See `docs/notes/luna-biography-validation.md` for validation.
 - The user-facing translation workflow must not require leaving Dwarf Fortress or
   manually processing a queue. The current `helper/process_queue.py` command is
   a development bridge only. The intended product workflow is a background
@@ -52,6 +69,11 @@
   prose before rendering, while retaining the original cache text for audit.
 - Opening the history view requests preparation for the selected dwarf. R reads
   prepared results without requesting new work; reopening requests newer history.
+  The open window also polls bounded prepared status once per wall-clock second,
+  including while DF is paused; unchanged status must not rebuild the display.
+  Keep a previous biography visible, or immediately show a small explicitly
+  factual overview when none exists. The player may close the window and play
+  while generation continues outside DFHack.
   It reports processing/ready/failed status and labels preparation time and older
   story revisions; it must not present a prepared view as live game state.
 - The reliability batch replaces the heavy queue payload with small
@@ -60,6 +82,33 @@
   The user verified responsive opening/refresh, story completion, and N/P
   timeline pagination on 2026-09-06. Older completed stories remain readable
   with their preparation time and explicit revision labeling.
+- On-demand biography profiles are separate bounded `.profile.json` files
+  referenced by small view requests. Never add this capture to the periodic
+  collector. Capture is capped per section (64 entries, 128 emotions), with a
+  128 KiB file limit; unsupported/truncated data must be reported. R does not
+  recapture; reopening does. Compact semantic profile content participates in
+  schema-v12 story caching, excluding capture/recall time and emotional strength.
+  Full profiles remain separate from the compact model input. The user verified initial profile
+  capture and all 33 then-current Lua tests; see biography audit notes.
+- Resolve Death/UnexpectedDeath references as historical figures only; do not
+  treat witnessed-death/body references as figure IDs. The user verified Minkot's
+  reference 7068 resolves to Momuz Lilumuzol and her link is
+  `histfig_hf_link_spousest`. Do not generalize this to her other death thoughts.
+- Object references use the shared typed resolver, never untyped ID guessing.
+  WitnessDeath/SawDeadBody resolve through incidents and their victims. Live
+  incident 141 identifies victim unit 8421 / HF 12569, `Dattle Brown` Obokkudust,
+  not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
+  error, and budget-exhausted status. Cache only within one capture so mutable
+  names and save/world changes cannot reuse stale objects. Limit 160 references
+  and link depth 2. Profile schema 2 / story schema 12 use typed references
+  and unique full-name accent restoration; never guess among ambiguous matches.
+- Keep writing-process commentary out of the historian's prose, including claims
+  about what is not invented. Show a blank line between biography and timeline.
+  Seeing a body is not witnessing its death, and ANYTHING supplies no specific
+  emotion. Missing cups/wells do not establish poor drink quality. Preserve these
+  distinctions explicitly when evaluating faster biography models.
+- In this installation, name lookup uses `dfhack.translation.translateName`,
+  not `dfhack.TranslateName`. Inline multiword Lua commands need the `:lua` form.
 - Split story paragraph breaks before UTF-8-to-DF conversion; preserve blank
   lines and convert each display line once. The user verified the formatting
   fix and all 30 DFHack tests on 2026-09-06.
@@ -70,6 +119,16 @@
   additions/removals, profession transitions, and personality facet changes.
   Change the request/schema version when the payload contract changes so stale
   cached stories are not reused.
+- Story caching is separate from exact timeline revision caching. Preserve named
+  references, relationships, values, preferences, personality changes, and counted
+  thought additions/removals. Quantize stress and need focus as floor(value/1000)
+  for compact story input; these bands are not diagnostic categories. Keep exact
+  values and timestamps in the raw history/profile. Publish all discovered
+  timelines in a save before sequential model work, prioritizing newest requests.
+  Do not regenerate dormant completed requests merely on schema deployment;
+  reopening requests an updated version. Save queue/preparation/model-queue/
+  generation/total timings and payload size for diagnosis. See
+  `docs/notes/biography-responsiveness.md` for measured results and limitations.
 - The Python history view preserves append order. A backward (year, tick)
   transition starts a `timeline_reset` segment with a fresh snapshot baseline;
   never infer normal changes across that boundary or sort the records to hide it.
@@ -179,7 +238,7 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
 - Build the smallest in-game summary window for the currently viewed dwarf, starting with translated thoughts and a close/refresh hotkey.
 - Add a small polling collector and JSONL export, with fixtures from a real save for repeatable tests.
 - Implement glossary-based translation and confidence/unknown handling for fields that are not understood yet.
-- Add the local model helper only after the glossary path works; default it to OpenAI `gpt-5-mini` and return a temporary fallback while uncached text is being translated.
+- Add the local model helper only after the glossary path works; use the backend-specific defaults above and return a temporary fallback while uncached text is being translated.
 - Add SQLite indexing and the first timeline/detail UI.
 - Add incremental collection, deduplication, privacy/retention controls, and only then consider an in-game overlay.
 

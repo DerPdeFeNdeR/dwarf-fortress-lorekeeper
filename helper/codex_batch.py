@@ -15,6 +15,19 @@ from typing import Any, Callable
 
 MAX_BATCH_SIZE = 50
 PROMPT_VERSION = "1"
+DEFAULT_MODEL = "gpt-5.6-luna"
+DEFAULT_REASONING_EFFORT = "low"
+
+
+def generation_settings() -> dict[str, str]:
+    """Keep the game worker independent of interactive Codex model defaults."""
+    model = os.environ.get('LOREKEEPER_MODEL', DEFAULT_MODEL).strip()
+    effort = os.environ.get('LOREKEEPER_REASONING_EFFORT', DEFAULT_REASONING_EFFORT).strip()
+    if not model:
+        raise ValueError('LOREKEEPER_MODEL must not be empty')
+    if effort not in {'none', 'low', 'medium', 'high', 'xhigh', 'max'}:
+        raise ValueError('Invalid LOREKEEPER_REASONING_EFFORT')
+    return dict(model=model, reasoning_effort=effort)
 
 
 def run_process(command, *, input, timeout, encoding, **_options):
@@ -100,12 +113,14 @@ def run_batch(
     items: list[dict[str, Any]],
     codex_command: str = "codex",
     runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+    *, settings: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     items = normalize_items(items)
     if not items:
         return {"schema_version": 1, "source": "codex-cli", "prompt_version": PROMPT_VERSION, "results": []}
 
     runner = runner or run_process
+    settings = settings or generation_settings()
     schema_path = Path(__file__).with_name("codex_batch_schema.json")
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as output_file:
         output_path = Path(output_file.name)
@@ -113,6 +128,8 @@ def run_batch(
     command = [
         codex_command,
         "exec",
+        "--model", settings['model'],
+        "-c", 'model_reasoning_effort=' + json.dumps(settings['reasoning_effort']),
         "--ephemeral",
         "--sandbox",
         "read-only",
@@ -139,7 +156,9 @@ def run_batch(
             response = json.loads(output_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError) as exc:
             raise RuntimeError("codex exec did not produce valid structured output") from exc
-        return validate_results(items, response)
+        result = validate_results(items, response)
+        result['generation'] = dict(settings)
+        return result
     finally:
         output_path.unlink(missing_ok=True)
 
