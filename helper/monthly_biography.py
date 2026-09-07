@@ -8,7 +8,8 @@ from biography_significance import assess
 from heard_stories import anchor
 from historian import HISTORIAN_CONTEXT, STORY_NOTICE, restore_reference_names
 from process_queue import write_results, repair_story_names
-from story_coverage import requirements, validate
+from story_coverage import CoverageError, requirements, validate
+import re
 from story_input import stable_json
 from fortress_calendar import MONTH_TICKS, MONTHS
 from environment import ATMOSPHERE_CONTEXT, personal as personal_environment
@@ -264,7 +265,29 @@ def process(directory, state, payload, records, profile, generate):
     text = chapter_text(key, restore_reference_names(result['text'], profile))
     if not text or len(text.encode()) > 8000:
         raise ValueError('Monthly chapter is empty or exceeds 8000 bytes')
-    coverage = validate(text, required)
+    try:
+        coverage = validate(text, required)
+    except CoverageError:
+        if state['generation']['strategies'].get('memoire') != 'personal-thread':
+            raise
+        # Qwen sometimes omits a required sentence despite the prompt. Insert
+        # only the missing verified facts into the existing paragraph; do not
+        # invent connective prose or retry the model.
+        present = set()
+        for row in required:
+            if row['event_id'] not in present:
+                try:
+                    validate(text, [row])
+                    present.add(row['event_id'])
+                except CoverageError:
+                    pass
+        missing = [row['sentence'] for row in required if row['event_id'] not in present]
+        sentences = re.split(r'(?<=[.!?])\s+', text.strip()) if text.strip() else []
+        for index, sentence in enumerate(missing):
+            slot = min(len(sentences), max(1, ((index + 1) * len(sentences)) // (len(missing) + 1)))
+            sentences.insert(slot, sentence)
+        text = ' '.join(sentences)
+        coverage = validate(text, required)
     document = dict(title=title(key), key=key, evidence_digest=digest(evidence),
                     text=text, coverage=coverage, generation=state['generation'])
     document.update(writing=batch.get('writing'), model_metrics=batch.get('model_metrics'))

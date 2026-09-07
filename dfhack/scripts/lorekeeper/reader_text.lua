@@ -30,7 +30,7 @@ function status(data, requested, available, request_error)
         return data and data.story and 'Updating Memoire. The previous version is shown below.' or
             'Preparing this Memoire...'
     end
-    if data and data.state == 'failed' then return 'The update failed. Try Update or see Details.' end
+    if data and data.state == 'failed' then return 'The update failed. Press U to retry, or see Details.' end
     if data and data.biography_update and data.biography_update.mode=='defer' then
         return 'No significant new developments. Saved memoire unchanged.'
     end

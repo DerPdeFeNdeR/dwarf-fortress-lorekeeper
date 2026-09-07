@@ -11,12 +11,25 @@ Supported profiles in `helper/writer_settings.py`:
 | Profile | Model | Memoire | Chronicle |
 | --- | --- | --- | --- |
 | `qwen-fast` (default) | `qwen3:8b` | personal brief | assembled facts with optional reflections |
+| `qwen-weave` (experiment) | `qwen3:8b` | personal brief | anchor-weaving paragraphs |
+| `qwen-stream` | `qwen3:8b` | personal brief | connected anchored stream |
+| `qwen-thread` (active playtest) | `qwen3:8b` | personal thread | connected anchored stream |
 | `qwen-compact` | `qwen3:8b` | personal brief | compact whole-passage generation |
 | `luna-literary` | `gpt-5.6-luna` | full-context passage | full-context passage |
 
 Qwen's anchored annual route falls back to its compact route when there are no
 mandatory anchors. Provenance records that actual fallback. `qwen-compact` is an
 evaluation option, not a verified improvement over the default.
+
+`qwen-weave` lets Qwen write paragraph flow around exact `{{A0}}` fact markers;
+Python replaces those markers with verified clauses and runs the existing coverage
+checks. Exact duplicate anchors are removed and missing markers are repaired only
+when the model included the exact supplied clause. `qwen-stream` lets Qwen write
+one connected annual response; Python preserves or shapes paragraph breaks,
+removes repeated connective/factual sentences, and repairs omitted anchors.
+`qwen-thread` adds a bounded prior passage to Memoire prompts and asks for a
+primary thread plus supporting moments. Both remain explicit profiles rather than
+changing the default.
 
 Luna's preparation lives in `helper/luna_writing.py`: original full context and
 translation envelope, no personal-brief compiler or Python annual assembly.

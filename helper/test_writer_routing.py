@@ -47,12 +47,15 @@ class WriterRoutingTests(unittest.TestCase):
     def test_each_model_uses_only_its_own_annual_strategies(self):
         item = annual_fixtures.AnchoredChronicleTests().item()
         for profile, strategies in [('qwen-fast', ('anchored', 'compact')),
+                                    ('qwen-weave', ('anchored-weave',)),
                                     ('luna-literary', ('luna-literary',))]:
             for strategy in strategies:
                 with self.subTest(profile=profile, strategy=strategy):
                     settings = self.settings(profile, strategies={'chronicle': strategy})
                     if strategy == 'anchored':
                         payload = {'p0': '', 'p1': ''}
+                    elif strategy == 'anchored-weave':
+                        payload = {'p0': '{{A0}} {{A1}}', 'p1': '{{A0}}'}
                     else:
                         row = dict(id=item['id'], text='Urist died.')
                         if strategy == 'luna-literary':

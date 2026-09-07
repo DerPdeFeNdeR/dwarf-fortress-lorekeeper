@@ -14,7 +14,16 @@ Never invent dialogue, attendance, sources, sensory details, occupation routines
 causes, relationships, or fortress conditions. A profession is only a current title.
 Voice instructions affect delivery, never facts or past personality. Express voice
 through phrasing, not a list of traits. Interpretation of the narrator's own motives
-must be signaled as interpretation. Never speculate about other people's private thoughts.
+must be signaled as interpretation. Another person's private thoughts may be
+speculated about only when the brief supplies a reason (such as an observed action,
+a stated thought or emotion, a known relationship, or a heard tale). Phrase that
+inference as uncertain interpretation, never as inside knowledge.
+The narrator may be unreliable about impressions, significance, and atmosphere;
+those can be colored by personality and mood. Keep supplied facts, names, dates,
+roles, and outcomes exact even when the narrator's interpretation is mistaken.
+Supplied mood and emotional reactions may color the narrator's tone and attention,
+but do not turn another dwarf's mood into the narrator's feeling or invent a mood
+when none is supplied. Stable personality shapes the voice; mood shapes this telling.
 Be warm for joys, restrained and compassionate for hardship. No caricatures,
 writing-process commentary, evidence disclaimers, headings, or bullet lists.
 Seeing a body is not witnessing death. Killed does not mean murdered. ANYTHING
@@ -124,6 +133,40 @@ def build_brief(item, options=None):
     # is easier for an 8B writer to follow than dozens of alternative clause patterns.
     brief['required_facts'] = [row['sentence'] for row in required]
     return task + RULES, compact_raw(json.dumps(brief, ensure_ascii=False))
+
+
+def build_threaded_brief(item, options=None):
+    """Personal Memoire variant with a small continuity thread, still evidence-bound."""
+    prompt, evidence = build_brief(item, options)
+    raw = json.loads(item['raw'])
+    prior = raw.get('previous_chapter') or raw.get('prior_narrative')
+    if isinstance(prior, dict):
+        prior = prior.get('text')
+    if isinstance(prior, str) and prior.strip():
+        thread = compact_raw(json.dumps({'previous_passage_for_continuity': prior[-1200:]}, ensure_ascii=False))
+    else:
+        thread = '{"previous_passage_for_continuity":null}'
+    guidance = """Continue a personal memory thread when one is supplied. Do not copy
+the previous passage or treat its interpretations as facts. Let the current
+month's evidence change, deepen, complicate, or answer an earlier concern.
+Vary the opening: begin with an attention, question, reaction, or transition,
+not automatically with 'I remember'. When several facts share the month, treat
+them as a connected constellation: let contrast, consequence, accumulation, or a
+shared concern join them instead of giving each fact its own event-then-reaction
+sentence. Connect supplied facts to the dwarf's values, interests, supported
+relationships, thoughts, or emotions when relevant. When several consequential
+facts are available, choose one primary thread and weave in one or two meaningful
+supporting moments. Group routine observations quietly or leave them out; do not
+let one striking fact erase all other important things that happened in the month.
+Treat supplied dwarf thoughts as direct evidence of what this dwarf noticed,
+remembered, or felt. A death-related thought establishes awareness of the death
+and its emotional weight, but never eyewitness attendance. Use the thought's
+reaction as the dwarf's inner response; do not invent a stronger emotion when the
+reaction is unspecified.
+End with a present feeling or unresolved thought rather than a repeated summary.
+This is a loose movement, not a visible formula; keep one natural paragraph.
+"""
+    return guidance + '\nContinuity thread:\n' + thread + '\n\n' + prompt, evidence
 
 
 def prose_schema(items):

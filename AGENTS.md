@@ -517,6 +517,19 @@ and the root `README.md` for current architecture and priorities.
   queue command and verify that `lorekeeper/show` remains responsive while a
   batch is pending. Report restart requirements explicitly.
 
+## Current Qwen narrative strategies
+
+- The active Qwen profile is `qwen-thread`: Memoire `personal-thread` and
+  Chronicle `anchored-stream`. Chronicle anchors remain globally ordered and
+  exact; paragraph breaks may be shaped after generation, and repeated
+  connective or factual sentences are removed. Same-day observed weather is
+  optional context only. Personal-thread chapters carry a bounded prior passage
+  for continuity and target one primary event plus supporting moments. Supplied
+  dwarf thoughts establish awareness and reaction, not eyewitness presence.
+  Missing required Memoire facts receive one deterministic insertion repair for
+  this strategy before coverage validation. Luna remains independent behind
+  `luna-literary`. See `docs/notes/qwen-stream-thread.md`.
+
 ## Original milestone order (historical)
 
 These were initial milestones, not the next-session plan. Consult `HANDOFF.md`

@@ -8,7 +8,7 @@ import anchored_chronicle
 import luna_writing
 from model_input import compact_raw
 from writer_settings import STRATEGY_VERSIONS
-from writing_brief import is_writing_task, build_brief, prose_schema, adapt_prose
+from writing_brief import is_writing_task, build_brief, build_threaded_brief, prose_schema, adapt_prose
 
 
 @dataclass(frozen=True)
@@ -76,12 +76,34 @@ def prepare(items, settings):
             return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
                                    anchored_chronicle.schema(items[0]))
         strategy = 'compact'  # No mandatory facts to assemble; record the actual fallback.
-    writing = strategy in ('personal-brief', 'compact')
+    if strategy == 'anchored-weave':
+        if len(items) != 1:
+            raise ValueError('Woven chronicles require one chapter per request')
+        if anchored_chronicle.supported(items[0]):
+            context, evidence = anchored_chronicle.weave_brief(items[0])
+            return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
+                                   anchored_chronicle.weave_schema(items[0]))
+        strategy = 'compact'
+    if strategy == 'anchored-stream':
+        if len(items) != 1:
+            raise ValueError('Stream chronicles require one chapter per request')
+        if anchored_chronicle.supported(items[0]):
+            context, evidence = anchored_chronicle.stream_brief(items[0])
+            return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
+                                   anchored_chronicle.stream_schema(items[0]))
+        strategy = 'compact'
+    writing = strategy in ('personal-brief', 'personal-thread', 'compact')
     schema = prose_schema(items) if writing else json.loads(Path(__file__).with_name('codex_batch_schema.json').read_text())
     results = schema['properties']['results']
     results.update(minItems=len(items), maxItems=len(items))
     results['items']['properties']['id']['enum'] = [item['id'] for item in items]
-    prompt = direct_prompt(items, writing, settings['strategy_options'].get(kind))
+    if strategy == 'personal-thread':
+        if len(items) != 1:
+            raise ValueError('Threaded personal writing requires one request per call')
+        context, evidence = build_threaded_brief(items[0], settings['strategy_options'].get(kind))
+        prompt = context + '\n\nSupplied game evidence:\n' + evidence
+    else:
+        prompt = direct_prompt(items, writing, settings['strategy_options'].get(kind))
     return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], prompt, schema)
 
 
@@ -90,6 +112,12 @@ def decode(prepared, items, response):
     if prepared.strategy == 'anchored':
         response = anchored_chronicle.assemble(items[0], response)
         diagnostics = response.get('writing_diagnostics')
-    if prepared.strategy in ('anchored', 'personal-brief', 'compact'):
+    if prepared.strategy == 'anchored-weave':
+        response = anchored_chronicle.assemble_weave(items[0], response)
+        diagnostics = response.get('writing_diagnostics')
+    if prepared.strategy == 'anchored-stream':
+        response = anchored_chronicle.assemble_stream(items[0], response)
+        diagnostics = response.get('writing_diagnostics')
+    if prepared.strategy in ('anchored', 'anchored-weave', 'anchored-stream', 'personal-brief', 'personal-thread', 'compact'):
         response = adapt_prose(response)
     return response, diagnostics

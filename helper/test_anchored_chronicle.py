@@ -2,7 +2,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from anchored_chronicle import assemble, paragraph_plan
+from anchored_chronicle import assemble, assemble_weave, paragraph_plan, weave_brief, woven_prose_is_safe
 from codex_batch import run_batch
 from model_adapters import ModelResponse
 from story_coverage import validate
@@ -33,6 +33,32 @@ class AnchoredChronicleTests(unittest.TestCase):
         self.assertLess(text.index('Minkot died'), text.index('Doren created'))
         self.assertEqual(validate(text, json.loads(item['raw'])['required_event_coverage'])['checked_event_ids'], [1, 2, 3])
         self.assertEqual(len(text.split('\n\n')), 2)
+
+    def test_weave_replaces_each_anchor_and_preserves_flow(self):
+        item = self.item()
+        result = assemble_weave(item, {'p0': 'The year turned strangely. {{A0}} I kept my thoughts to myself. {{A1}}',
+                                       'p1': 'Then came the other news: {{A0}}'})
+        text = result['results'][0]['text']
+        self.assertNotIn('{{A', text)
+        self.assertIn('The year turned strangely. In Slate, Urist died.', text)
+        self.assertIn('In Felsite, Doren created Bright Hope.', text)
+        self.assertEqual(result['writing_diagnostics']['strategy'], 'woven_verified_facts')
+
+    def test_weave_rejects_missing_or_repeated_anchor(self):
+        result = assemble_weave(self.item(), {'p0': 'A remembered year.', 'p1': '{{A0}}'})
+        self.assertEqual(result['writing_diagnostics']['repaired_anchors'], 2)
+        self.assertIn('In Slate, Urist died.', result['results'][0]['text'])
+        with self.assertRaises(ValueError):
+            assemble_weave(self.item(), {'p0': '{{A0}} {{A0}} {{A1}}', 'p1': '{{A0}}'})
+
+    def test_weave_allows_subjective_color_but_rejects_invented_crowd_reactions(self):
+        self.assertTrue(woven_prose_is_safe('I thought it was swift and strange.'))
+        self.assertTrue(woven_prose_is_safe('No one saw it and no one cared.'))
+
+    def test_weave_removes_repeated_refrain(self):
+        result = assemble_weave(self.item(), {'p0': 'This was a curious year indeed. {{A0}}',
+                                              'p1': 'This was a curious year indeed. {{A0}}'})
+        self.assertEqual(result['writing_diagnostics']['removed_repeated_sentences'], 1)
 
     def test_wrong_plan_and_excessive_reflections_fail_without_partial_publication(self):
         for response in ({'p0': ''}, {'p0': '', 'p1': '', 'p2': ''},

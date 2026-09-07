@@ -4,8 +4,8 @@ import json
 import os
 from pathlib import Path
 
-STRATEGY_VERSIONS = {'luna-literary': '1', 'personal-brief': '1', 'compact': '1',
-                     'anchored': '1', 'translation': '1'}
+STRATEGY_VERSIONS = {'luna-literary': '1', 'personal-brief': '1', 'personal-thread': '1', 'compact': '1',
+                     'anchored': '1', 'anchored-weave': '1', 'anchored-stream': '1', 'translation': '1'}
 OLLAMA_OPTIONS = dict(temperature=0.7, top_p=0.8, top_k=20, min_p=0,
                       num_ctx=20480, num_predict=2048, think=False)
 FAST = {'memoire': 'personal-brief', 'chronicle': 'anchored'}
@@ -13,13 +13,22 @@ LITERARY = {'memoire': 'luna-literary', 'chronicle': 'luna-literary'}
 PERSONAL_OPTIONS = {'quiet_words': [60, 100], 'busy_words': [100, 180], 'intro_words': [80, 140]}
 PROFILES = {
     'qwen-fast': dict(provider='ollama', model='qwen3:8b', strategies=FAST),
+    'qwen-weave': dict(provider='ollama', model='qwen3:8b',
+                       strategies={'memoire': 'personal-brief', 'chronicle': 'anchored-weave'},
+                       model_options={'temperature': 0.5}),
+    'qwen-stream': dict(provider='ollama', model='qwen3:8b',
+                        strategies={'memoire': 'personal-brief', 'chronicle': 'anchored-stream'},
+                        model_options={'temperature': 0.6}),
+    'qwen-thread': dict(provider='ollama', model='qwen3:8b',
+                        strategies={'memoire': 'personal-thread', 'chronicle': 'anchored-stream'},
+                        model_options={'temperature': 0.6}),
     'qwen-compact': dict(provider='ollama', model='qwen3:8b',
                          strategies={'memoire': 'personal-brief', 'chronicle': 'compact'}),
     'luna-literary': dict(provider='codex-cli', model='gpt-5.6-luna', strategies=LITERARY),
 }
 MODEL_POLICIES = {
     'qwen3:8b': dict(provider='ollama', profile='qwen-fast',
-                    allowed={'memoire': {'personal-brief'}, 'chronicle': {'anchored', 'compact'}}),
+                    allowed={'memoire': {'personal-brief', 'personal-thread'}, 'chronicle': {'anchored', 'anchored-weave', 'anchored-stream', 'compact'}}),
     'gpt-5.6-luna': dict(provider='codex-cli', profile='luna-literary',
                         allowed={'memoire': {'luna-literary'}, 'chronicle': {'luna-literary'}}),
 }
@@ -75,7 +84,7 @@ are snapshots: this function never merges the current process environment.
     if provider == 'codex-cli' and options:
         raise ValueError('Codex CLI uses reasoning_effort; Ollama model_options are not supported')
     validate_options(options)
-    strategy_options = {'memoire': dict(PERSONAL_OPTIONS) if strategies['memoire']=='personal-brief' else {}, 'chronicle': {}}
+    strategy_options = {'memoire': dict(PERSONAL_OPTIONS) if strategies['memoire'] in ('personal-brief', 'personal-thread') else {}, 'chronicle': {}}
     for kind, tuning in settings.get('strategy_options', {}).items():
         if kind not in strategy_options or not isinstance(tuning, dict) or set(tuning) - strategy_options[kind].keys():
             raise ValueError('Unsupported options for the selected writing strategy')
