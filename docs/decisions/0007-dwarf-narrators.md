@@ -1,6 +1,7 @@
 # ADR 0007: Personality-shaped dwarf narrators
 
-Date: 2026-09-06. Status: implemented; player acceptance pending.
+Date: 2026-09-06. Status: implemented and published in `8dd7a66`;
+extended player verification continues.
 
 ## Context
 

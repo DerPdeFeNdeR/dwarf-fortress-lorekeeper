@@ -1,178 +1,87 @@
-# The Lorekeeper — DFHack development scripts
+# Lorekeeper DFHack scripts
 
-This directory contains repository-local DFHack scripts. It is intentionally
-not copied into the user's DFHack installation automatically.
+Use the [root Windows installation guide](../README.md#windows-developer-installation)
+for prerequisites, script-path setup, autostart, the WSL watcher and first tests.
+This directory contains repository-local Lua scripts, not a compiled plugin.
+Nothing here automatically installs files or edits DFHack configuration.
 
-## Install for development
+## Commands
 
-The recommended development setup is to add this repository directory as a
-DFHack script path. Open this file in a text editor (create it if it does not
-exist):
+Run in the **DFHack launcher** (Ctrl+Shift+D), not PowerShell/WSL. Use slashes.
 
-```text
-C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\script-paths.txt
-```
+| Command | Purpose |
+| --- | --- |
+| `lorekeeper/memoire` | Player-facing selected-dwarf reader; legacy alias `lorekeeper/read` |
+| `lorekeeper/chronicles` | Fortress annual reader; no selected dwarf required |
+| `lorekeeper/history/show` | Bounded prepared debug timeline; opening requests preparation, R only rereads results |
+| `lorekeeper/story` | Queue a small selected-dwarf view request without opening a window |
+| `lorekeeper/collect start` | Start/resume citizen snapshot collection |
+| `lorekeeper/collect status` | Collector counts/state; unchanged during pause is normal |
+| `lorekeeper/collect stop` | Stop citizen snapshots for this session, not the annual/environment monitor |
+| `lorekeeper/environment` | Read-only atmosphere observer status |
+| `lorekeeper/autostart` | Register fortress-load startup and activate it for an already-loaded fortress |
+| `lorekeeper/chronicle` | Start/inspect annual monitor; internal companion to the reader |
+| `lorekeeper/test` | In-game regression suite; not `lorekeeper/tests` |
+| `lorekeeper/profile` | Inspect bounded on-demand context and resolved references |
+| `lorekeeper/dump` | Raw selected-unit identity, thoughts, stress and personality |
+| `lorekeeper/history` | Legacy synchronous text timeline; may be slower than prepared readers |
+| `lorekeeper/record` | Explicit selected-unit snapshot append, skipping unchanged signatures |
+| `lorekeeper/show` | Legacy current-state summary, not a historical Memoire |
+| `lorekeeper/translate` | Queue a legacy selected-unit explanation for the save watcher |
+| `lorekeeper/tokens` / `lorekeeper/tokens copy` | Runtime token catalog / clipboard export |
 
-Add this line, using the Windows path format:
+Internal modules such as `snapshot` and `glossary` are not standalone narrative
+commands. A command finishing successfully does not necessarily open a window.
 
-```text
-+C:\Users\contr\projects\dwarf-fortress-lorekeeper\dfhack\scripts
-```
+## Reader behavior
 
-The leading `+` tells DFHack to search this development directory before its
-default script directories. DFHack reads the file at startup, so fully exit
-and restart Dwarf Fortress after changing it. This keeps edits in the project
-available without copying files into the DFHack installation.
+Memoire controls: U requests updated evidence, I returns to the introduction,
+N/P browse monthly chapters, D toggles debug details, Escape closes. Select another
+dwarf by closing, changing the active unit sheet, and reopening. Story polling does
+not recapture profiles or issue new model calls.
 
-The equivalent WSL path is:
+Chronicles controls: D requests Year so far, N/P browse chapters, R retries a failed
+chapter, Escape closes. The monitor queues completed years after observed rollover;
+opening the reader alone does not request a new draft. Good completed chapters are
+immutable. Coverage warnings describe bounded collection, not permission to invent.
 
-```text
-/mnt/c/Users/contr/projects/dwarf-fortress-lorekeeper/dfhack/scripts
-```
+The debug history window supports R, N/P, Ctrl+C and Escape. It reads small prepared
+files and polls once per real second, even while DF is paused. The old `history`
+console command uses synchronous Lua history/index helpers; avoid it for latency
+measurements of the player-facing readers.
 
-The local DFHack installation discovered during Milestone 0 is:
+## Overlays
 
-```text
-/mnt/c/Program Files (x86)/Steam/steamapps/common/DFHack
-```
-
-## First command
-
-1. Start Dwarf Fortress through Steam.
-2. Load a fortress save.
-3. Select a dwarf with the normal `v` unit view or the unit list.
-4. Open the DFHack console. On Windows, use the DFHack console window or the
-   in-game DFHack console if enabled.
-5. Run:
-
-```text
-lorekeeper/dump
-```
-
-The command is read-only and currently reports selected-unit identity data.
-If no unit is selected, it will print a harmless message instead.
-
-To open the first in-game summary window, select a dwarf and run:
-
-```text
-lorekeeper/show
-```
-
-Use `Ctrl-R` to refresh the selected dwarf, `Ctrl-C` to copy the visible
-summary to the system clipboard, and `Esc` to close the window.
-
-Useful troubleshooting commands:
+`lorekeeper/overlay.biography` is the retained internal ID of the **Read Memoire**
+unit-sheet panel; Ctrl+L activates it. `lorekeeper/overlay.chronicles` opens Fortress
+Chronicles with Ctrl+H. Use `gui/overlay` for placement/enabling. Internal identifiers
+remain stable to preserve saved settings despite the product rename.
 
 ```text
-help lorekeeper/dump
-ls lorekeeper
+overlay enable lorekeeper/overlay.biography
+overlay enable lorekeeper/overlay.chronicles
 ```
 
-To export the active runtime token catalog, run:
+New overlay discovery without a path change can use:
 
 ```text
-lorekeeper/tokens
+:lua require('plugins.overlay').rescan()
 ```
 
-To copy the catalog to the system clipboard:
+## Collection and restarts
 
-```text
-lorekeeper/tokens copy
-```
+The citizen collector checks in batches of 12 with a 100-game-tick interval and a
+1,200-tick per-dwarf recording cooldown; full snapshot signatures use 500-point
+stress bands. Annual/event/environment tasks are separate. None invokes a model
+inside DFHack. Rich profiles/references are captured on demand, not for every dwarf
+on every polling cycle.
 
-To append one selected dwarf snapshot to the current fortress history file:
+Configuration files are relative to the **Dwarf Fortress** directory:
+`dfhack-config/script-paths.txt` and `dfhack-config/init/dfhack.init`.
+A changed script path requires a full game restart. For ordinary Lua edits, close
+and rerun the command first; restart if DFHack does not reload a module. Loading
+`lorekeeper/autostart` manually can activate the existing hook, but restart to test
+future automatic startup after initialization-file edits.
 
-```text
-lorekeeper/record
-```
-
-Records are written as newline-delimited JSON to the active save directory at
-`lorekeeper-history.jsonl`. Repeating an unchanged snapshot for the same dwarf
-is skipped. The command records only when explicitly run; it does not poll or
-modify game state.
-
-To inspect the selected dwarf's recorded timeline and detected changes:
-
-```text
-lorekeeper/history
-```
-
-This is currently a read-only text timeline. It reports the raw snapshot count
-and a grouped event count, with baseline data, coalesced stress trends, and
-discrete changes in profession, thoughts, stress, and personality facets. The
-first history lookup builds a fortress-wide sidecar index in
-`lorekeeper-history-index`; later dwarf lookups avoid rescanning the master
-JSONL file.
-
-To queue the selected dwarf's grouped history for an asynchronous Codex story:
-
-```text
-lorekeeper/story
-```
-
-This writes a JSONL job without waiting for Codex. Process it with
-`helper/process_queue.py`; the structured result is cached beside the active
-save for a later history/story view.
-
-To read the cached story and grouped timeline in-game:
-
-```text
-lorekeeper/history/show
-```
-
-The window supports scrolling, refresh with `R`, copying with `Ctrl+C`, and
-closing with `Esc`. It reports whether the latest story is ready, pending, or
-not yet requested.
-
-To start or stop the all-citizen background collector:
-
-```text
-lorekeeper/collect start
-lorekeeper/collect status
-lorekeeper/collect stop
-```
-
-The collector scans citizens in small batches, keeps signatures in memory,
-and writes only changed snapshots. It limits each dwarf to one emitted record
-per in-game day while still checking for changes. It is disabled by default
-and stops when the world unloads.
-
-To start the collector automatically whenever a fortress loads, add this line
-to the DFHack initialization file:
-
-```text
-lorekeeper/autostart
-```
-
-On the current Steam installation, the file is located in the `init`
-subdirectory:
-
-```text
-C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress\dfhack-config\init\dfhack.init
-```
-
-Fully exit and restart Dwarf Fortress after changing `dfhack.init`. The
-collector can still be stopped or inspected with `lorekeeper/collect stop` and
-`lorekeeper/collect status`.
-
-To run the collector policy tests without writing to the history file:
-
-```text
-lorekeeper/test
-```
-
-To queue the selected dwarf for an asynchronous Codex explanation:
-
-```text
-lorekeeper/translate
-```
-
-This writes a structured request to `lorekeeper-translation-queue.jsonl` in
-the active save directory. From WSL, run `helper/process_queue.py` with that
-queue path and a result path named `lorekeeper-translation-cache.json`; then
-run `lorekeeper/show` again or press refresh. The game-facing command never
-waits for Codex and never contains an API key.
-
-If DFHack cannot find the command, confirm the path has no quotes, restart the
-game completely, and check that the repository file exists at
-`dfhack/scripts/lorekeeper/dump.lua`.
+Do not copy scripts over the DFHack installation or change user startup files from
+repository automation. Documentation/setup steps require the user's explicit action.

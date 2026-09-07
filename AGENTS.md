@@ -4,7 +4,8 @@
 
 - Read `HANDOFF.md` when starting the next session. On 2026-09-06 the user requested
   first-person monthly memoires and personality-shaped annual dwarf narrators.
-  This narration batch is implemented but not committed; player acceptance is pending.
+  This batch was published as `8dd7a66`; the user is playtesting. Check the
+  worktree before assuming later documentation changes are published.
   Natural annual rollover and extended monthly growth remain unverified in play.
 
 ## User baseline
@@ -56,8 +57,8 @@
 - The player-facing reader is `lorekeeper/memoire`, separate
   from the technical `lorekeeper/history/show` view. Prioritize readable prose,
   a secondary interpretation notice, simple update/details/close controls, and
-  automatic completion while keeping an older story readable. Build the reader
-  before adding a selected-dwarf-screen entry button. Do not expose ticks, raw
+  automatic completion while keeping an older story readable. The selected-dwarf
+  entry button is implemented. Do not expose ticks, raw
   traits, or event counts by default in the player-facing reader.
   U explicitly requests updated preparation; D toggles technical details without
   requesting work, and N/P page those details. In story mode N/P browse monthly
@@ -110,7 +111,7 @@
   biographies. See `docs/notes/luna-biography-validation.md` for validation.
 - The user-facing translation workflow must not require leaving Dwarf Fortress or
   manually processing a queue. The current `helper/process_queue.py` command is
-  a development bridge only. The intended product workflow is a background
+  a development bridge only. The implemented reader workflow uses a background
   local watcher that notices queued jobs, invokes the authenticated model
   client outside DFHack, writes the cache, and lets the in-game UI show pending
   or ready status.
@@ -145,7 +146,7 @@
   verified context. Reference corrections, old-event discovery, time reversal,
   stable-context changes, or length limits rebuild instead. Never advance the
   checkpoint after a failed update or feed invented motives back as verified facts.
-  New reader requests use schema 25 / monthly protocol 1: a short introduction
+  New reader requests use schema 26 / monthly protocol 1: a short introduction
   and recollections plus significant monthly chapters. Reopening checks evidence
   on demand; it does not write a passage merely because another month passed.
   Each month is exactly one narrative paragraph; the introduction may have 1-3.
@@ -184,7 +185,7 @@
   collector. Capture is capped per section (64 entries, 128 emotions), with a
   128 KiB file limit; unsupported/truncated data must be reported. R does not
   recapture; reopening does. Compact semantic profile content participates in
-  schema-v23 story caching, excluding capture/recall time and emotional strength.
+  schema-v26 story caching, excluding capture/recall time and emotional strength.
   Full profiles remain separate from the compact model input. The user verified initial profile
   capture and all 33 then-current Lua tests; see memoire audit notes.
 - Resolve Death/UnexpectedDeath references as historical figures only; do not
@@ -197,7 +198,7 @@
   not Momuz. Resolve verified kinds only; preserve unsupported, missing, invalid,
   error, and budget-exhausted status. Cache only within one capture so mutable
   names and save/world changes cannot reuse stale objects. Limit 160 references
-  and link depth 2. Profile schema 9 / story schema 23 use typed references
+  and link depth 2. Profile schema 9 / story schema 26 use typed references
   and unique full-name accent restoration; never guess among ambiguous matches.
 - WatchPerform references are performance incidents, not historical events directly.
   Only Performance / STORYTELLING_EVENT with a valid reference_id and no written
@@ -295,12 +296,11 @@
   recorded time reversal, not proof of a save reload. On 2026-09-06 the user
   verified Minkot's regenerated two-segment story and the final page's explicit
   reset/fresh-baseline label in-game.
-- The local `helper/watch_queue.py` watcher is the hands-off development
-  workflow: it monitors the active save queue, invokes Codex outside DFHack,
-  and updates the cache while the player remains in-game. A future installer
-  or launcher should start the save-directory watcher automatically. Prefer
-  `helper/watch_save_directory.py` for startup because it follows all regions
-  beneath the Dwarf Fortress save directory.
+- `helper/watch_save_directory.py` is the active hands-off worker for Memoires,
+  Chronicles and legacy queues across regions under the save root. The older
+  `helper/watch_queue.py` handles only a legacy token queue, not current readers.
+  Windows logon startup is available through explicit task registration;
+  launching the worker with DFHack remains a future preference.
 - `helper/start_watcher.sh` is the portable startup wrapper. It resolves the
   repository path and launches the save-directory watcher; Windows Task
   Scheduler registration remains an explicit user setup step.
@@ -360,8 +360,9 @@
   Preserve the latest coverage-rejected candidate separately as
   `<chapter-key>.rejected.json`, with missing IDs, requirements, request/prompt
   digests and generation settings. Never publish that candidate or replace the
-  last good story with it. Keep one diagnostic file per chapter, no automatic
-  coverage retries, and use the Chronicle label for annual validation errors.
+  last good story with it. Keep one diagnostic file per chapter. Annual coverage
+  permits one persisted, insertion-only correction attempt per request, never an
+  automatic retry loop or a style rewrite. Use Chronicle labels for annual errors.
   A coverage mismatch does not prove a fact was omitted: inspect rejected prose
   before changing requirements. Tests must reject wrong roles, dates and negation
   while allowing supported appointment wording and small spelled-out years.
@@ -431,7 +432,12 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
 - Prefer concise, dated, evidence-based notes. Link to the relevant code, command output, save fixture, or official documentation when practical.
 - Do not store secrets, API keys, private save data, or large generated dumps in the repository.
 
-## Recommended first architecture
+## Original architecture sketch (historical)
+
+This records the initial design, not current installation requirements. The
+implemented readers are in-game, storage is file-based, and the active worker
+uses Codex. SQLite and a desktop/web viewer are not implemented. See `PLAN.md`
+and the root `README.md` for current architecture and priorities.
 
 1. **DFHack collector (Lua):** read selected dwarf data and detect changes on a modest interval or relevant state changes. Start with thoughts, personality facets, current stress/needs, relationships, profession, and location.
 2. **Stable data contract:** write newline-delimited JSON or another append-only format with a schema version. Use records such as `dwarf_snapshot`, `thought`, `personality_change`, and `event`; include world/site identity, dwarf ID, in-game time, collection time, and source/version metadata.
@@ -466,7 +472,10 @@ Apply Bob Martin's Clean Code principles whenever writing or reviewing code, whi
   queue command and verify that `lorekeeper/show` remains responsive while a
   batch is pending. Report restart requirements explicitly.
 
-## Suggested milestone order
+## Original milestone order (historical)
+
+These were initial milestones, not the next-session plan. Consult `HANDOFF.md`
+and `PLAN.md`; do not implement remaining speculative items without approval.
 
 - Verify the installed DFHack version and locate its script path.
 - Build a read-only `dump` command for one selected dwarf; validate the raw fields against the game UI.

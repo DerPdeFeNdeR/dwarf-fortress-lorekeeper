@@ -1,5 +1,33 @@
 # Lorekeeper data contract
 
+## Current protocol map
+
+Audited 2026-09-07 against implementation checkpoint `8dd7a66`. These are
+independent contracts, not one global schema version.
+
+| Contract | Version | Purpose |
+| --- | --- | --- |
+| Persisted dwarf snapshot | 1 | Raw append-only history record below |
+| On-demand profile | 9 | Bounded context and typed references; 128 KiB file cap |
+| Prepared history view | 26 | Python-prepared reader status, timeline and story caching |
+| Monthly request protocol / book | 1 / 2 | Introduction and significant monthly Memoires |
+| Annual request | 2 | Year evidence plus saved narrator; version 1 remains readable |
+| Environment observation | 1 | Bounded observed calendar/weather/geography context |
+
+Profiles are captured on demand, not for every periodic citizen scan. Small
+reader requests reference those files. The in-game reader consumes bounded
+prepared results, never the full history/model payload. Cache identity includes
+semantic evidence and generation settings; capture time alone is not new evidence.
+Older incompatible book data is retained separately rather than silently used as
+current personal knowledge. Model prose is interpretation, never new evidence.
+
+History indices are derived accelerators; preserve the underlying history log.
+Back up generated books and revisions too if their prose matters. Token/glossary
+queues and the optional HTTP prototype are separate older contracts; see
+[translation](translation.md) and [worker utilities](../helper/README.md).
+
+## Snapshot example
+
 The current persisted record type is `dwarf_snapshot`. Records are written as
 one compact JSON object per line to `lorekeeper-history.jsonl` in the active
 save directory.

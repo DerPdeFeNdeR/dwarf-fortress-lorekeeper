@@ -13,8 +13,10 @@ login.
 ## Decision
 
 Provide `lorekeeper/autostart`, a small DFHack initialization script that
-registers a world-load callback and silently runs `lorekeeper/collect start`.
-Users explicitly enable it by adding `lorekeeper/autostart` to `dfhack.init`.
+registers a fortress-load callback and runs `lorekeeper/collect start`.
+Users explicitly enable it in `dfhack-config/init/dfhack.init` under the game
+directory. The hook now also starts supported-event indexing and the annual /
+environment monitor. External watcher startup still requires separate setup.
 The existing collector command remains available for status, stop, and manual
 recovery.
 

@@ -1,144 +1,118 @@
-# Lorekeeper local translation helper
+# Lorekeeper background worker
 
-This optional service keeps the OpenAI API key outside DFHack Lua. It binds to
-localhost, translates one bounded token request at a time, and persists only
-successful structured results in a local cache.
+For Windows installation, use the [root README](../README.md#windows-developer-installation).
+All commands here run in **WSL from the repository root**, unless stated otherwise.
+The active worker uses Python's standard library plus an authenticated Linux Codex CLI.
+POSIX `fcntl` locking and process groups mean native Windows Python is not supported.
 
-## Run
-
-From this directory:
-
-```bash
-export OPENAI_API_KEY='your-key'
-python3 server.py
-```
-
-The default endpoint is `http://127.0.0.1:8765`.
+## Active workflow
 
 ```bash
-curl http://127.0.0.1:8765/health
-curl -X POST http://127.0.0.1:8765/translate \
-  -H 'Content-Type: application/json' \
-  -d '{"kind":"thought","raw":"SatisfiedAtWork","context":"emotion=SATISFACTION"}'
+python3 helper/watch_save_directory.py "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
 ```
 
-Configuration:
+Adjust the save root. This watches direct child region folders, prepares small
+`lorekeeper-views` requests and annual `lorekeeper-chronicles` requests, and also
+processes legacy token queues. It maintains a heartbeat and exclusive save-root
+lock. One worker per root; Ctrl+C stops a foreground worker. No game-loop network
+calls or manual queue processing are needed for Memoires/Chronicles.
 
-- `OPENAI_API_KEY`: required for cache misses; never placed in DFHack files.
-- `LOREKEEPER_MODEL`: defaults to `gpt-5-mini`.
-- `LOREKEEPER_CACHE_PATH`: defaults to `~/.lorekeeper/translation-cache.json`.
-- `LOREKEEPER_HOST` and `LOREKEEPER_PORT`: default to `127.0.0.1:8765`.
+`--interval 5` is the default delay between work cycles, not a guaranteed completion
+time. `--once` is a development processing pass that **can invoke the model and
+write results**; it is not a read-only health check and does not acquire the normal
+continuous worker lock. Stop the normal watcher before using it.
 
-Run the offline tests with:
+The startup wrapper resolves its checkout and redirects output into a WSL log:
 
 ```bash
-python3 -m unittest discover -s . -p 'test_*.py'
+bash helper/start_watcher.sh "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
 ```
 
-The helper is not yet called by the in-game window. That integration remains
-separate so the DFHack render loop never waits on a network request.
+Default log: `~/.local/state/lorekeeper/watcher.log`, or
+`$XDG_STATE_HOME/lorekeeper/watcher.log` when set. The wrapper defaults temporary
+model output to `/dev/shm` unless `TMPDIR` is already set. It does not register or
+start a Windows scheduled task itself. See the root README for installation,
+`-WhatIf`, access-denied troubleshooting, and explicit first start.
 
-## Codex CLI batch backend
+## Configuration
 
-The Codex worker defaults to `gpt-5.6-luna` with `low` reasoning, passed explicitly
-on each invocation. It does not inherit your interactive Codex model/effort.
-Optional worker environment settings are `LOREKEEPER_MODEL` and
-`LOREKEEPER_REASONING_EFFORT`; restart the watcher after changing them. Defaults
-require no environment setup or changes to your personal Codex configuration.
-The separate HTTP prototype above retains its own default.
+The Codex worker explicitly passes these settings instead of inheriting your
+interactive Codex model configuration:
 
-Memoire caches include model and reasoning settings. Existing memoires stay
-readable; reopening `lorekeeper/history/show` requests preparation with the active
-settings. The window updates automatically, even while DF is paused. No game
-restart is needed for a worker-model change. Legacy token-translation queue
-entries already cached by request ID are retained, not regenerated in bulk.
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `LOREKEEPER_MODEL` | `gpt-5.6-luna` | Model accessible to your Codex account |
+| `LOREKEEPER_REASONING_EFFORT` | `low` | Effort accepted by that model |
+| `TMPDIR` | `/dev/shm` through wrapper | Temporary structured model output |
+| `XDG_STATE_HOME` | `~/.local/state` | Wrapper log parent |
 
-If Codex CLI is already authenticated with ChatGPT, queued translations can
-be processed without an API key. Put a JSON array of pending items in a file:
-
-```json
-[
-  {"id":"thought:SatisfiedAtWork","kind":"thought","raw":"SatisfiedAtWork"},
-  {"id":"emotion:SATISFACTION","kind":"emotion","raw":"SATISFACTION"}
-]
-```
-
-Then run one bounded batch:
+The current model is verified on the development account; availability differs.
+To try another account-supported model, set its actual identifier in the WSL
+shell before starting the foreground worker. These exports affect that shell's
+children, not an already-running task:
 
 ```bash
-python3 helper/codex_batch.py pending.json results.json
+export LOREKEEPER_MODEL='YOUR_SUPPORTED_MODEL'
+export LOREKEEPER_REASONING_EFFORT='low'
 ```
 
-The command deduplicates equivalent requests, sends at most 50 items through
-one `codex exec --ephemeral --sandbox read-only` invocation, validates the
-structured response, and writes `results.json`. It does not edit the
-repository or send dwarf names/IDs unless they are explicitly included in a
-request item.
+For scheduled startup, put non-secret exports in the WSL login-shell startup
+file your distribution reads (commonly `~/.profile` or `~/.bash_profile`). Verify
+with `wsl.exe -- bash -lc 'command -v codex; codex login status'` in PowerShell,
+then restart the task. A setting only in an interactive `.bashrc` section may not
+reach a noninteractive login shell. Do not change personal Codex config for this
+project, or copy credentials into the checkout/save files.
 
-For the DFHack queue, process the game-generated JSONL file and write the
-cache that `lorekeeper/show` reads:
+Model calls have a 180-second timeout. Current monthly Memoire processing writes
+at most one chapter per pass; unchanged/insignificant evidence avoids generation.
+Annual processing handles one chapter per pass, with at most one additional
+bounded coverage correction. Failed requests retain previous good prose; polling
+must not silently regenerate or repeatedly repair them. Explicit U/reopen (Memoire)
+or R/D (Chronicles) controls subsequent requests. Legacy token-queue processing
+has a separate retry-on-error policy.
+
+## Testing
 
 ```bash
-python3 helper/process_queue.py \
-  /path/to/save/region3/lorekeeper-translation-queue.jsonl
+PYTHONDONTWRITEBYTECODE=1 TMPDIR=/dev/shm python3 -m unittest discover -s helper -p 'test_*.py'
 ```
 
-Repeat the command whenever new jobs are queued. It skips IDs already present
-in the result cache and writes that cache beside the queue. An explicit second
-path is still supported when needed.
-
-For the hands-off workflow, run the background watcher instead:
+At published checkpoint `8dd7a66`: 176 tests, 169 passed and seven opt-in live tests
+skipped; 115 additional tests run in-game via `lorekeeper/test`.
+Live tests use your authenticated model account and create temporary fixtures.
+Run only the relevant bounded check, from **`helper/`**:
 
 ```bash
-python3 helper/watch_queue.py \
-  "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save/region3/lorekeeper-translation-queue.jsonl"
+PYTHONDONTWRITEBYTECODE=1 TMPDIR=/dev/shm LOREKEEPER_LIVE_CORRECTION_TEST=1 python3 -m unittest test_chronicle_correction.CorrectionTests.test_live_indexed_correction
 ```
 
-It checks for new jobs every five seconds, retries processing failures, and
-writes results beside the queue. Use `--once` for a bounded test run.
+Other opt-in examples and provenance are in the [test notes](../docs/notes/README.md).
+Mock tests do not prove a new game's field layout, account access or visual behavior.
 
-To watch every region/save beneath the Dwarf Fortress save directory, use:
+## Legacy developer tools—not the Memoire installation path
 
-```bash
-python3 helper/watch_save_directory.py \
-  "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
-```
+- `python3 helper/codex_batch.py INPUT.json OUTPUT.json`: up to 50 deduplicated
+  items in one schema-constrained Codex invocation. Inputs contain `id`, `kind`,
+  `raw` and optional context. Uses the same model/auth settings as the worker.
+- `python3 helper/process_queue.py /path/to/region/lorekeeper-translation-queue.jsonl`:
+  process the old token/selected-unit explanation queue; cache defaults beside it.
+- `python3 helper/watch_queue.py /path/to/region/lorekeeper-translation-queue.jsonl`:
+  watch only that legacy queue. **Does not prepare current Memoires or Chronicles**
+  and does not provide the save-directory worker heartbeat.
 
-This is the preferred target for a future Windows/WSL login task because it
-continues working when the active region changes.
+Do not run these concurrently against files owned by the normal watcher.
+`lorekeeper/story` now writes a small view request; it no longer queues a JSONL
+history job for `process_queue.py`.
 
-The repository includes a startup wrapper that resolves its own project path:
+## Optional HTTP API prototype
 
-```bash
-bash helper/start_watcher.sh
-```
+`helper/server.py` is separate and **not connected to the current in-game readers**.
+It binds to `127.0.0.1:8765`, uses a separately provided `OPENAI_API_KEY`, defaults
+to `gpt-5-mini`, and exposes `/health` and `/translate`. It uses the Platform API
+rather than the Codex sign-in path. No API server/key is needed for the setup above.
 
-For automatic startup, configure Windows Task Scheduler to run at user logon:
-
-```text
-wsl.exe -- bash -lc "bash /mnt/c/users/contr/projects/dwarf-fortress-lorekeeper/helper/start_watcher.sh"
-```
-
-The wrapper does not register a task or change Windows settings itself. The
-one-time task registration remains an explicit user setup step.
-
-To register the watcher at Windows logon, run PowerShell as the user who will
-play the game:
-
-```powershell
-.\helper\install_watcher_task.ps1
-```
-
-Validate the Windows-side setup without registering the task:
-
-```powershell
-.\helper\install_watcher_task.ps1 -WhatIf
-```
-
-Override paths when needed:
-
-```powershell
-.\helper\install_watcher_task.ps1 -ProjectPath 'C:\path\to\dwarf-fortress-lorekeeper' -SaveDirectory 'C:\path\to\Dwarf Fortress\save'
-```
-
-The script creates or replaces only the named `Lorekeeper Queue Watcher` task.
+For deliberate prototype development only, provide the API key privately in the
+process environment and run `python3 helper/server.py`. Other settings are
+`LOREKEEPER_HOST`, `LOREKEEPER_PORT`, `LOREKEEPER_MODEL` and `LOREKEEPER_CACHE_PATH`
+(default `~/.lorekeeper/translation-cache.json`). Never place keys in documentation,
+Lua, save data or Git. Do not expose this prototype beyond localhost.

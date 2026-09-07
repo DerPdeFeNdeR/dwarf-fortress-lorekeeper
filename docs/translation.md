@@ -1,56 +1,65 @@
-# Translation boundary
+# Collection, generation, and presentation boundary
 
-The deterministic glossary is the first translation layer. It converts a raw
-DF token into a small structured result without changing the captured
-snapshot:
+Current pipeline: Windows DFHack writes bounded profiles/requests beside saves;
+`helper/watch_save_directory.py` in WSL prepares timelines and model inputs, invokes
+the authenticated Codex CLI, validates output and writes caches. Readers poll those
+prepared files without network calls or history parsing in the game thread.
 
-```json
-{
-  "schema_version": 1,
-  "kind": "thought",
-  "known": true,
-  "raw": "Talked",
-  "text": "Had a conversation",
-  "source": "glossary",
-  "confidence": "high"
-}
-```
+## Current story workflow
 
-Unknown tokens use `known: false`, preserve the raw token, set
-`source: "unknown"` and `confidence: "none"`, and display an explicit
-unknown message. They are never silently guessed.
+- `lorekeeper/memoire` (alias `read`) opens a selected-dwarf monthly book. Opening/U
+  captures once. Introduction first, significant months newest-first; unchanged
+  evidence reuses prose, and updates revise chapters rather than append filler.
+- `lorekeeper/chronicles` displays annual chapters; D requests a current-year draft,
+  and the monitor queues a finished year after observing rollover.
+- `lorekeeper/story` creates a small `lorekeeper-views` request. It does **not** write
+  the old `dwarf-history-v3` JSONL job. `history/show` is the prepared debug reader.
+- Current view schema is 26, profile schema 9, monthly request protocol 1/book 2,
+  annual request schema 2. See [contracts](schema.md) for storage and provenance.
 
-The glossary result is presentation data, not history data. History retains
-the raw IDs and values from the snapshot so labels can be corrected or
-retranslated later. A future local model helper should accept only bounded,
-explicit inputs, return this same shape plus model metadata, and remain
-optional and asynchronous.
+The worker explicitly selects `gpt-5.6-luna` / low reasoning by default. Account
+access must be verified; model/effort can be configured without changing personal
+Codex defaults. Credentials stay outside Lua and saves. Structured game data is
+sent to the model provider; this is not a fully offline workflow. See
+[worker documentation](../helper/README.md).
 
-## User-facing queue workflow
+## Evidence and cache safeguards
 
-The DFHack `lorekeeper/translate` and `lorekeeper/story` commands write JSONL
-jobs to the active save directory. Running `helper/process_queue.py` manually
-is currently a development bridge, not the intended user workflow.
+Memoires use first-person personal-knowledge-filtered inputs; annual chronicles
+have broader local history and one saved narrator per year. Imagined motives are
+interpretation, not new evidence. Generated prior prose is not a factual source.
+Unknown references remain unknown. Current relationship links do not prove old
+relationships or awareness of another person's events.
 
-The finished product should run a background local watcher that notices queued
-jobs and updates the cache without requiring the player to leave Dwarf
-Fortress. The in-game UI should show pending, ready, and failure states while
-the helper remains outside DFHack for credentials and model execution.
+Required anchors check selected consequential events and tellings, not all possible
+claims. Failed replacements preserve good prose. Annual coverage failures permit
+one insertion-only sentence-index correction; it must pass all anchors, and its
+attempt is persisted before invocation to survive crashes without loops. Personal
+Memoire failures do not use this annual correction path.
 
-The preferred future startup behavior is for DFHack/Dwarf Fortress startup to
-launch or signal the external watcher. The current login-task/wrapper approach
-is an interim development setup.
+Cache identity includes relevant evidence and writer/model/effort/schema context.
+Optional atmosphere is attached after significance selection, not a reason to
+generate a new chapter. Shared observed weather is excluded from personal Memoire
+inputs; annual context can include it. Completed annual chapters stay immutable.
+Prepared views describe captured revisions, not continuously live game state.
 
-History story jobs use the `dwarf-history-v3` request namespace and include
-grouped events plus exact thought and personality changes. The cache key is
-versioned so changes to that payload contract force a fresh model result.
+JSON writers preserve Unicode, escaping it where needed for DFHack. Display
+conversion happens once per line after splitting paragraph breaks. Known legacy
+mojibake is repaired conservatively; raw/source text remains available for audit.
 
-The helper cache writer preserves Unicode by using JSON Unicode escapes. This
-keeps the cache ASCII-safe for DFHack while allowing names and model prose to
-round-trip with their original characters. The queue processor also repairs a
-known CP437-mojibake form of a dwarf name in newly generated story prose.
-The history window writes small per-dwarf requests under `lorekeeper-views`.
-The save-directory watcher prepares paginated timelines before generating a
-story from a fixed revision. R reads results; reopening requests current history.
-Older stories remain labeled while newer preparation completes. N/P change
-timeline pages. Model input construction never runs in the window callback.
+## Deterministic glossary and legacy utilities
+
+Known tokens are labeled locally (`known: true`, `source: glossary`); unknowns
+preserve the raw token and explicitly report unknown status. These labels never
+replace raw history data.
+
+`lorekeeper/translate` still queues an old selected-unit explanation to
+`lorekeeper-translation-queue.jsonl`; the save watcher processes it for
+`lorekeeper/show`. `process_queue.py` and `watch_queue.py` handle this legacy queue,
+not current Memoires/Chronicles. They are developer utilities, not required player
+steps. `helper/server.py` is a separate localhost Platform API prototype and is not
+wired to the current readers.
+
+Startup remains two-part: DFHack autostart for collection and an optional Windows
+logon task for the WSL worker. Launching the worker with DFHack itself is a future
+product goal, not implemented behavior.

@@ -1,7 +1,13 @@
 # ADR-003: Isolate model translation in a localhost helper
 
-**Status:** accepted  
+**Status:** historical prototype; superseded for the active reader workflow
 **Date:** 2026-09-06
+
+The HTTP service remains an optional prototype, not an installation requirement.
+The current readers use the Codex save-directory worker described in
+[ADR-005](0005-biography-context-and-worker.md) and the
+[helper guide](../../helper/README.md). The API service below and the later
+file-based Codex bridge are separate implementations.
 
 ## Decision
 
