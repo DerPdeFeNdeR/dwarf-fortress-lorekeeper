@@ -26,6 +26,9 @@ This change needs a worker restart, not a Dwarf Fortress restart.
 
 ## Active workflow
 
+For Windows, use the PowerShell launcher above. The shell command below is the
+native Linux/WSL option and is not required on Windows.
+
 ```bash
 python3 helper/watch_save_directory.py "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
 ```

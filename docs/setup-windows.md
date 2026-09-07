@@ -59,8 +59,9 @@ $env:LOREKEEPER_REASONING_EFFORT = 'low'
 .\helper\start_watcher.ps1 -Python python
 ```
 
-Windows and WSL Codex installations have separate login state. Luna's writing
-strategy is separate from Qwen's strategy.
+Windows Codex is the recommended Luna setup. WSL Codex is an optional alternative
+and has separate `PATH` and login state. Luna's writing strategy is separate from
+Qwen's strategy.
 
 ## Play
 
@@ -68,4 +69,3 @@ Select a dwarf and press **Ctrl+L**, or click **Read Memoire**. Press **U** to
 request an update. Run `lorekeeper/chronicles` from the DFHack launcher and press
 **D** for a year-so-far Chronicle. The game remains playable while the worker
 generates text. Close the worker with Ctrl+C when finished.
-

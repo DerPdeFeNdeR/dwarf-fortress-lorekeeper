@@ -76,7 +76,7 @@ There are **two separate startup mechanisms**: DFHack starts collection on fortr
 
 ## Windows developer installation
 
-Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**, and WSL for optional Codex testing. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended Qwen setup; WSL remains supported for Codex/Luna.
+Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**, and Windows Codex for optional Luna testing. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended setup for both Qwen and Luna; WSL remains an optional alternative.
 
 Codex sign-in is needed only for the optional Luna path. The player workflow
 defaults to local **`qwen3:8b`** through Ollama. Luna uses **`gpt-5.6-luna` / low
@@ -85,7 +85,7 @@ See [official authentication guidance](https://learn.chatgpt.com/docs/auth).
 
 Commands are labeled **PowerShell**, **WSL**, or **DFHack**. Copy commands only, not terminal prompts such as `PS C:\Users\...>` or error output.
 
-### 1. Install DFHack (WSL is optional)
+### 1. Install DFHack and Windows Python
 
 Install Steam Dwarf Fortress and its matching DFHack. Launch the game once with DFHack, load a fortress, and check that **Ctrl+Shift+D** opens the DFHack launcher (backtick is another default binding). Exit DF before editing its startup configuration.
 
@@ -97,47 +97,21 @@ C:\Program Files (x86)\Steam\steamapps\common\Dwarf Fortress
 
 Use your actual Steam library path throughout. Configuration belongs in the **Dwarf Fortress** folder, not the separate **DFHack** folder.
 
-WSL is only needed for the optional Codex/Luna developer path. If you choose it,
-install WSL in **Administrator PowerShell**:
+No WSL installation is required for the Windows player workflow. No compiled
+plugin, Python packages, HTTP API server, or web server are needed.
+
+### 2. Download one checkout
+
+Download or clone the repository into a stable Windows folder. If Git is
+installed, PowerShell can use:
 
 ```powershell
-wsl --install -d Ubuntu
+git clone https://github.com/DerPdeFeNdeR/dwarf-fortress-lorekeeper.git "$env:USERPROFILE\Lorekeeper"
+cd "$env:USERPROFILE\Lorekeeper"
+python --version
 ```
 
-Restart Windows if requested; open Ubuntu and create its Linux user. In **PowerShell**, check your distributions:
-
-```powershell
-wsl --list --verbose
-```
-
-The task installer uses the **default WSL distribution and its default Linux user**. If necessary, select yours (substitute its actual name):
-
-```powershell
-wsl --set-default Ubuntu
-```
-
-See [Microsoft's WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
-
-### 2. Clone one shared checkout
-
-In **WSL/Ubuntu**:
-
-```bash
-sudo apt update
-sudo apt install git python3 curl
-```
-
-Keep the checkout on the Windows drive so DFHack and WSL access the **same files**. Replace `YOUR_WINDOWS_USER` with your Windows profile folder name:
-
-```bash
-mkdir -p "/mnt/c/Users/YOUR_WINDOWS_USER/projects"
-cd "/mnt/c/Users/YOUR_WINDOWS_USER/projects"
-git clone https://github.com/DerPdeFeNdeR/dwarf-fortress-lorekeeper.git
-cd dwarf-fortress-lorekeeper
-python3 --version
-```
-
-Do not clone a second copy in PowerShell. No compiled plugin, Python packages, HTTP API server, or web server are needed for this workflow.
+Do not run a second worker from another checkout against the same save directory.
 
 ### 3. Install Ollama and download the local model
 
