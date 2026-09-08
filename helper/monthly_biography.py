@@ -138,7 +138,7 @@ def intro_context(payload):
     profile = payload.get('biography_profile') or {}
     return dict(identity=payload.get('identity'), profile={k: profile[k] for k in (
         'relationships', 'friends', 'values', 'preferences', 'personality_facets',
-        'mental_attributes') if k in profile})
+        'mental_attributes', 'age') if k in profile})
 
 
 def publish_catalog(directory, unit, book, state):

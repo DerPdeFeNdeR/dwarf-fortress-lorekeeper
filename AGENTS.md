@@ -528,7 +528,21 @@ and the root `README.md` for current architecture and priorities.
   dwarf thoughts establish awareness and reaction, not eyewitness presence.
   Missing required Memoire facts receive one deterministic insertion repair for
   this strategy before coverage validation. Luna remains independent behind
-  `luna-literary`. See `docs/notes/qwen-stream-thread.md`.
+  `luna-literary`. Each month earns concrete details from its own evidence;
+  preferences are tastes rather than events, possessions, or memories. See
+  `docs/notes/qwen-stream-thread.md`.
+
+## Dwarf age and narrative delivery
+
+- Dwarf Fortress life stages are baby (age 0 through under 1), child (age 1
+  through under 12), and adult (age 12+). There is no canonical elder life
+  stage. Profiles and saved annual narrators carry `age.life_stage`; an optional
+  `age.narrative_band=older_adult` is an editorial voice cue only and must not be
+  described as game metadata or used to imply frailty, forgetfulness, or reduced
+  ability. Child prose should make age noticeable through concrete attention,
+  curiosity, and simpler literal phrasing while preserving intelligence. See
+  `docs/notes/dwarf-age-and-voice.md`. Explicit live-unit labels `Dwarven Baby`
+  and `Dwarven Child` override conflicting birth-year estimates.
 
 ## Original milestone order (historical)
 

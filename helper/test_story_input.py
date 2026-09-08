@@ -81,6 +81,11 @@ class StoryInputTests(unittest.TestCase):
         changed['relationships'][0]['kind'] = 'spouse'
         self.assertNotEqual(story_key(payload, 1), story_key(build_story_input({}, [], changed), 1))
 
+    def test_compaction_preserves_age_for_model_voice(self):
+        profile = {'age': {'years': 10, 'life_stage': 'child', 'narrative_band': 'child'}}
+        payload = build_story_input({}, [], profile)
+        self.assertEqual(payload['biography_profile']['age'], profile['age'])
+
     def test_stress_within_band_does_not_trigger_generation(self):
         a = build_story_input({}, build_timeline([record(1,-100), record(2,-120)]), None)
         b = build_story_input({}, build_timeline([record(1,-100), record(2,-120), record(3,-140)]), None)

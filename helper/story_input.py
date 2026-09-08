@@ -34,7 +34,7 @@ def compact_profile(profile):
         return None
     result = {k: profile[k] for k in ('unit_id', 'histfig_id', 'figures',
               'relationships', 'friends', 'values', 'preferences', 'personality_facets',
-              'mental_attributes', 'limitations') if k in profile}
+              'mental_attributes', 'age', 'limitations') if k in profile}
     result['references'] = [r for r in profile.get('references', []) if r.get('status') == 'resolved']
     for key in ('emotions', 'shortterm_memories', 'longterm_memories'):
         result[key] = thoughts(profile.get(key, []))

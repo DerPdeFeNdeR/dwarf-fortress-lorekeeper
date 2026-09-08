@@ -85,6 +85,20 @@ local function capture(unit,year,site_id,selection)
             reason='No eligible living adult dwarf citizen was available at selection.'}
     end
     local mind=unit.status.current_soul.personality
+    local figure=df.historical_figure.find(unit.hist_figure_id)
+    local birth_year=unit.birth_year or (figure and figure.birth_year)
+    local age
+    if type(birth_year)=='number' and birth_year>=0 and birth_year<=year then
+        local years=year-birth_year
+        local life_stage=years<1 and 'baby' or years<12 and 'child' or 'adult'
+        local profession=dfhack.units.getProfessionName(unit)
+        local stage_source='birth_year_estimate'
+        if profession=='Dwarven Baby' then life_stage,stage_source='baby','unit_life_stage'
+        elseif profession=='Dwarven Child' then life_stage,stage_source='child','unit_life_stage' end
+        -- "older_adult" is our prose-delivery band, not a DF life stage.
+        age={years=years,life_stage=life_stage,source=stage_source,
+            narrative_band=years>=60 and life_stage=='adult' and 'older_adult' or life_stage}
+    end
     local values={}
     for _,value in ipairs(mind.values) do
         if #values>=32 then break end
@@ -93,7 +107,7 @@ local function capture(unit,year,site_id,selection)
     return {version=1,status='selected',year=year,site_id=site_id,
         unit_id=unit.id,histfig_id=unit.hist_figure_id,
         name=dfhack.df2utf(dfhack.units.getReadableName(unit,true)),
-        personality_facets=traits(mind),values=values,mental_attributes=mental_attributes(unit),
+        personality_facets=traits(mind),values=values,age=age,mental_attributes=mental_attributes(unit),
         captured_at={year=df.global.cur_year,tick=df.global.cur_year_tick},
         selection={method='weighted_reservoir',eligible=selection.count,
             total_weight=selection.total,max_event_bonus=8},

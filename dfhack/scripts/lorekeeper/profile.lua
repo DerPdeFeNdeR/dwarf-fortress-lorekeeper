@@ -70,6 +70,26 @@ function capture(unit)
         end
     end
     local figure = df.historical_figure.find(unit.hist_figure_id)
+    -- Live units carry birth data in some DF versions where the historical
+    -- figure does not expose it through the Lua wrapper.
+    local birth_year = field(unit, 'birth_year') or (figure and field(figure, 'birth_year'))
+    if type(birth_year) == 'number' and birth_year >= 0 and birth_year <= df.global.cur_year then
+        local age = df.global.cur_year - birth_year
+        local life_stage = age < 1 and 'baby' or age < 12 and 'child' or 'adult'
+        local profession = dfhack.units.getProfessionName(unit)
+        local stage_source = 'birth_year_estimate'
+        -- This is a life-stage label, not an occupation. It is authoritative
+        -- when DF's live unit label conflicts with incomplete birth timing.
+        if profession == 'Dwarven Baby' then life_stage, stage_source = 'baby', 'unit_life_stage'
+        elseif profession == 'Dwarven Child' then life_stage, stage_source = 'child', 'unit_life_stage' end
+        -- Dwarf Fortress has no elder life-stage. This is an editorial band
+        -- for delivery only; it must never be presented as game metadata.
+        local narrative_band = age >= 60 and life_stage == 'adult' and 'older_adult' or life_stage
+        result.age = {years=age, life_stage=life_stage,
+            narrative_band=narrative_band, source=stage_source}
+    else
+        result.age = {status='unknown'}
+    end
     result.historical_events=reqscript('lorekeeper/event_index').capture(unit.hist_figure_id,resolver)
     section('relationships', figure and figure.histfig_links, function(link)
         local target = resolver:resolve('historical_figure', link.target_hf)

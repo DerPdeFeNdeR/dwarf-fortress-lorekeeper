@@ -6,7 +6,7 @@ from unittest.mock import patch
 from codex_batch import run_batch
 from model_adapters import ModelResponse
 from test_model_input import expand
-from writing_brief import build_brief, voice_guide, explicit_values
+from writing_brief import build_brief, build_threaded_brief, voice_guide, explicit_values
 from evaluate_writing import annual_sections
 
 
@@ -54,6 +54,14 @@ class WritingBriefTests(unittest.TestCase):
         self.assertEqual(brief['current_character_context']['references'], [])
         self.assertIn('exactly one paragraph', instructions)
 
+    def test_thread_uses_only_current_draft_and_blocks_preference_as_event(self):
+        item = self.item()
+        instructions, encoded = build_threaded_brief(item)
+        self.assertIn('Every month must earn its concrete details', instructions)
+        self.assertIn('preference is never evidence', instructions)
+        self.assertIn('Invented occupation routine', instructions)
+        self.assertNotIn('Invented siege', instructions)
+
     def test_introduction_keeps_undated_memories(self):
         instructions, encoded = build_brief(self.item(True))
         self.assertIn('Old memory', encoded)
@@ -67,6 +75,29 @@ class WritingBriefTests(unittest.TestCase):
                                 'MEMORY': {'relative_level': 'higher'}}}})
         self.assertIn('Use short, plain, grammatical sentences.', guide)
         self.assertTrue(any('never add missing' in row for row in guide))
+
+    def test_age_uses_dwarf_life_stages_and_separate_editorial_band(self):
+        self.assertTrue(any('baby' in row and 'adult reasoning' in row
+                            for row in voice_guide({'age': {'life_stage': 'baby'}})))
+        self.assertTrue(any('young perspective' in row
+                            for row in voice_guide({'age': {'life_stage': 'child'}})))
+        child = voice_guide({'age': {'life_stage': 'child'}})
+        self.assertTrue(any('Avoid adult abstractions' in row for row in child))
+        self.assertTrue(any('grounded perspective' in row
+                            for row in voice_guide({'age': {'life_stage': 'adult'}})))
+        guide = voice_guide({'age': {'life_stage': 'adult', 'narrative_band': 'older_adult'}})
+        self.assertTrue(any('older adult' in row for row in guide))
+        self.assertFalse(any('elder life stage' in row.lower() for row in guide))
+
+    def test_annual_narrator_brief_preserves_age_metadata(self):
+        raw = dict(events=[], cultural_events=[], narrator={
+            'status': 'selected', 'name': 'Doren', 'histfig_id': 7,
+            'age': {'years': 80, 'life_stage': 'adult', 'narrative_band': 'older_adult'}},
+                   required_event_coverage=[])
+        _, encoded = build_brief(dict(kind='fortress_year', raw=json.dumps(raw)))
+        brief = expand(json.loads(encoded))
+        self.assertEqual(brief['narrator']['age']['life_stage'], 'adult')
+        self.assertEqual(brief['narrator']['age']['narrative_band'], 'older_adult')
 
     def test_prose_schema_and_adapter_reject_wrong_ids_and_incomplete_fields(self):
         item = self.item()

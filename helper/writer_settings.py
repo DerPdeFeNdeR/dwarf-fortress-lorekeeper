@@ -4,7 +4,7 @@ import json
 import os
 from pathlib import Path
 
-STRATEGY_VERSIONS = {'luna-literary': '1', 'personal-brief': '1', 'personal-thread': '1', 'compact': '1',
+STRATEGY_VERSIONS = {'luna-literary': '1', 'personal-brief': '1', 'personal-thread': '4', 'compact': '1',
                      'anchored': '1', 'anchored-weave': '1', 'anchored-stream': '1', 'translation': '1'}
 OLLAMA_OPTIONS = dict(temperature=0.7, top_p=0.8, top_k=20, min_p=0,
                       num_ctx=20480, num_predict=2048, think=False)

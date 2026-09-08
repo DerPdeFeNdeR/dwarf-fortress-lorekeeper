@@ -32,6 +32,10 @@ Heard tales retain the teller and listening framing: their subjects' dates and
 actions are not the listener's experiences or the date of the telling. Explain
 supplied organization types at first mention; never invent visits or affiliations.
 Current relationships do not prove historical bonds or awareness of others' lives.
+Preferences are stable tastes, not possessions, actions, memories, or events. A
+preference for an item type such as BIN may color attention only when current
+evidence supports that item being present; never turn it into a named object,
+gift, relic, touch, or family story.
 Include EVERY required fact sentence in the prose exactly once, unchanged.
 Build connected prose around these sentences. Do not negate them or put them in
 quotation marks. They outrank brevity. Use all required facts before adding reflection.
@@ -52,6 +56,12 @@ MENTAL_DELIVERY = {
     'MEMORY': ('Stay focused on the supplied events; never invent forgetting.',
                'Emphasize supplied concrete details; never add missing ones.'),
 }
+AGE_DELIVERY = {
+    'baby': 'The subject is a baby; keep any voice framing observational and immediate, and do not give the baby adult reasoning or independent actions.',
+    'child': 'The subject is a child. Use a young perspective with concrete, immediate attention, short thought movements, visible curiosity, simple literal word choices, and occasional childlike questions or comparisons grounded in supplied facts. Keep grammar and reasoning fully readable and intelligent. Avoid adult abstractions about identity, politics, destiny, or long life experience; avoid ornate metaphors and invented sensory details.',
+    'adult': 'Use a grounded perspective shaped by present responsibilities and accumulated experience.',
+    'older_adult': 'Use a patient older adult perspective attentive to change, memory, and long stretches of time; do not make the voice frail or forgetful.',
+}
 
 
 def voice_guide(profile):
@@ -68,6 +78,11 @@ def voice_guide(profile):
         band = (mental.get(name) or {}).get('relative_level')
         if band in ('lower', 'higher'):
             guide.append(choices[int(band == 'higher')])
+    age = profile.get('age') or {}
+    if isinstance(age, dict):
+        band = age.get('narrative_band') or age.get('life_stage')
+        if band in AGE_DELIVERY:
+            guide.append(AGE_DELIVERY[band])
     return guide or ['Use natural, readable prose without an exaggerated voice.']
 
 
@@ -101,7 +116,7 @@ def build_brief(item, options=None):
         brief = {key: value for key, value in raw.items()
                  if key not in ('required_event_coverage', 'narrator')}
         brief['narrator'] = {key: narrator[key] for key in
-                            ('status', 'name', 'histfig_id', 'values') if key in narrator}
+                            ('status', 'name', 'histfig_id', 'values', 'age') if key in narrator}
         brief['narrator']['values'] = explicit_values(narrator)
         brief['voice'] = voice_guide(narrator)
         task = ('Write the fortress year as 4-8 connected paragraphs, at most 900 words. '
@@ -139,7 +154,9 @@ def build_threaded_brief(item, options=None):
     """Personal Memoire variant with a small continuity thread, still evidence-bound."""
     prompt, evidence = build_brief(item, options)
     raw = json.loads(item['raw'])
-    prior = raw.get('previous_chapter') or raw.get('prior_narrative')
+    # Earlier chapters help avoid repetition; only the same chapter's prior
+    # draft is a continuity aid and it must not supply new facts.
+    prior = raw.get('previous_chapter')
     if isinstance(prior, dict):
         prior = prior.get('text')
     if isinstance(prior, str) and prior.strip():
@@ -149,6 +166,10 @@ def build_threaded_brief(item, options=None):
     guidance = """Continue a personal memory thread when one is supplied. Do not copy
 the previous passage or treat its interpretations as facts. Let the current
 month's evidence change, deepen, complicate, or answer an earlier concern.
+Every month must earn its concrete details from this month's chapter_evidence.
+Do not carry a person, object, image, event, or family story from the continuity
+thread into this month unless current evidence names or supports it. A
+preference is never evidence that its item exists or was handled.
 Vary the opening: begin with an attention, question, reaction, or transition,
 not automatically with 'I remember'. When several facts share the month, treat
 them as a connected constellation: let contrast, consequence, accumulation, or a
