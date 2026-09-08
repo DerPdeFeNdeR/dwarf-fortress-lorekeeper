@@ -77,11 +77,14 @@ end
 
 function MemoireWindow:refresh(force, reset_scroll)
     self.data = self.unit_id and requests.read(self.unit_id) or nil
+    self.profile = self.data and self.data.request and
+        requests.read_profile(self.unit_id, self.data.request.profile_file) or nil
     self.available = self.unit_id and requests.worker_available() or false
     local data = self.data
     local signature = table.concat({tostring(data and data.updated_at),tostring(data and data.state),
         tostring(data and data.revision),tostring(data and data.story_revision),tostring(self.available),
-        tostring(self.request_error)}, '|')
+        tostring(self.request_error), tostring(self.data and self.data.request and self.data.request.profile_file),
+        tostring(self.profile and self.profile.captured_at and self.profile.captured_at.tick)}, '|')
     if not force and signature == self.signature then return end
     self.signature = signature
     local status = self.unit_id and text.status(data,self.requested,self.available,self.request_error) or 'No dwarf selected.'
@@ -94,9 +97,17 @@ function MemoireWindow:refresh(force, reset_scroll)
             local chapter=requests.read_chapter(self.unit_id,selected.file)
             lines=display.wrap(selected.title .. (' (%d/%d)\n\n'):format(index,#data.chapters) ..
                 (chapter and chapter.text or 'This saved chapter could not be read.'),self.width or 68)
+            if selected.key == 'intro' then
+                local relationship_lines=text.relationship_lines(self.profile, self.width or 68)
+                if #relationship_lines > 0 then table.insert(lines, '') end
+                for _, line in ipairs(relationship_lines) do table.insert(lines, line) end
+            end
         else
-            lines=display.wrap('Introduction and recollections\n\nThe introduction is not ready yet. '..
+            lines=display.wrap('Introduction\n\nThe introduction is not ready yet. '..
                 'Saved monthly chapters can still be browsed.',self.width or 68)
+            local relationship_lines=text.relationship_lines(self.profile, self.width or 68)
+            if #relationship_lines > 0 then table.insert(lines, '') end
+            for _, line in ipairs(relationship_lines) do table.insert(lines, line) end
         end
     end
     if self.details then

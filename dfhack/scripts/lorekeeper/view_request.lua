@@ -39,6 +39,19 @@ function read_chapter(unit_id, filename)
     if ok then return value end
 end
 
+function read_profile(unit_id, filename)
+    if type(filename) ~= 'string' or not filename:match('^' .. unit_id .. '%.%d+%.%d+%.%d+%.profile%.json$') then
+        return nil
+    end
+    local file = io.open(directory() .. '/' .. filename, 'r')
+    if not file then return nil end
+    local contents = file:read(131073)
+    file:close()
+    if not contents or #contents > 131072 then return nil end
+    local ok, value = pcall(json.decode, contents)
+    if ok and type(value) == 'table' and value.unit_id == unit_id then return value end
+end
+
 function request(unit_id)
     local path = directory()
     if not dfhack.filesystem.mkdir_recursive(path) and not dfhack.filesystem.isdir(path) then

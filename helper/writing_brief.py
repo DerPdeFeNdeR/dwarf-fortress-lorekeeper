@@ -130,13 +130,13 @@ def build_brief(item, options=None):
                      'Do not introduce yourself, summarize the whole year, or invent events in other seasons. ')
     else:
         profile = raw.get('biography_profile') or {}
-        intro = raw['chapter_title'] == 'Introduction and recollections'
+        intro = raw['chapter_title'] == 'Introduction'
         brief, length = compile_personal(raw, options)
         intro_words = (options or {}).get('intro_words', [80, 140])
         brief['current_character_context']['values'] = explicit_values(profile)
         brief['voice'] = voice_guide(profile)
         task = ('Write in the named dwarf\'s first person. ' +
-                (f'Write a short introduction and undated recollections in 1-3 paragraphs, normally {intro_words[0]}-{intro_words[1]} words. '
+                (f'Write a short Introduction and undated recollections in 1-3 paragraphs, normally {intro_words[0]}-{intro_words[1]} words. '
                  'Choose two or three recollections; do not catalogue every body sighting or repeat a recollection. '
                  'Do not date baseline memories by their observation time. ' if intro else
                  f'Write exactly one paragraph for this month, normally {length}. '

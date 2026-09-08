@@ -145,7 +145,7 @@ def character_context(profile, evidence, intro):
 
 def compile_personal(raw, options=None):
     profile = raw.get('biography_profile') or {}
-    intro = raw['chapter_title'] == 'Introduction and recollections'
+    intro = raw['chapter_title'] == 'Introduction'
     required_ids = {row.get('event_id') for row in raw.get('required_event_coverage', [])}
     refs = {row['key']: row for row in profile.get('references', []) if row.get('key')}
     evidence = {}

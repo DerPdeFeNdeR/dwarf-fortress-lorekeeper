@@ -22,8 +22,8 @@ ONE narrative paragraph, normally 100-180 words, never more than 300 words.
 The introduction may use 1-3 short paragraphs. Do not include a heading.
 Rewrite this chapter as one coherent passage
 when updating it; do not append another list or repeat its opening portrait.
-For Introduction and recollections, write a short character introduction and
-undated memories. Never assign a date to a memory from its capture/recall time.
+For the Introduction, write a short character self-portrait and undated
+recollections. Never assign a date to a memory from its capture/recall time.
 For a monthly chapter, only chapter_evidence supplies events for that month.
 Observation rows date noticing a change, NOT the original occurrence of a thought.
 Describe changing recollections without claiming an old death/birth happened then.
@@ -53,7 +53,7 @@ def chapter_text(key, text):
 
 def title(key):
     if key == 'intro':
-        return 'Introduction and recollections'
+        return 'Introduction'
     year, month = map(int, key.split('-'))
     return f'Year {year} / {MONTHS[month]}'
 

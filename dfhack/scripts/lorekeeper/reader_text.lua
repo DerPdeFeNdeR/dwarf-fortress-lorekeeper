@@ -49,3 +49,46 @@ function lines(data, width)
     return display.wrap('This dwarf\'s memoire will appear here when it is ready.\n\n' ..
         'You can close this window and keep playing. There is no need to wait here.', width)
 end
+
+local function relationship_label(kind)
+    kind = tostring(kind or 'connection'):lower()
+    kind = kind:gsub('^<', ''):gsub('>$', '')
+    kind = kind:gsub('^type:%s*', ''):gsub('^histfig%s+hf%s+link%s+', 'histfig_hf_link_')
+    local labels = {
+        histfig_hf_link_spousest='Spouse',
+        histfig_hf_link_motherst='Mother',
+        histfig_hf_link_fatherst='Father',
+        histfig_hf_link_parentst='Parent',
+        histfig_hf_link_grandparentst='Grandparent',
+        histfig_hf_link_grandchildst='Grandchild',
+        histfig_hf_link_childst='Child',
+        histfig_hf_link_siblingst='Sibling',
+        spouse='Spouse', mother='Mother', father='Father', parent='Parent',
+        grandparent='Grandparent', grandchild='Grandchild', child='Child', sibling='Sibling',
+        close_friend='Close friend', friend='Friend', kindred_spirit='Kindred spirit',
+    }
+    return labels[kind] or tostring(kind or 'connection'):gsub('^histfig_hf_link_', ''):gsub('st$', ''):gsub('_', ' ')
+end
+
+function relationship_lines(profile, width)
+    if not profile then return {} end
+    local rows = {}
+    local seen = {}
+    local function add(kind, name)
+        if type(name) ~= 'string' or name == '' then return end
+        local key = relationship_label(kind) .. '\0' .. name
+        if seen[key] then return end
+        seen[key] = true
+        table.insert(rows, '- ' .. relationship_label(kind) .. ': ' .. name)
+    end
+    for _, row in ipairs(profile.relationships or {}) do add(row.kind, row.target_name) end
+    for _, row in ipairs(profile.friends or {}) do add(row.kind, row.target_name) end
+    if #rows == 0 then return {} end
+    local result = {}
+    for _, line in ipairs(display.wrap('Relationships', width)) do table.insert(result, line) end
+    table.insert(result, '')
+    for _, line in ipairs(rows) do
+        for _, wrapped in ipairs(display.wrap(line, width)) do table.insert(result, wrapped) end
+    end
+    return result
+end

@@ -153,6 +153,13 @@ assert_true(reader_text.selected_chapter(chapter_list,'000102-03').key=='000102-
     'background refresh preserves explicitly selected month')
 assert_true(reader_text.selected_chapter({{key='000102-03'}},'intro')==nil,
     'pending introduction does not jump to a monthly chapter')
+local relationships=reader_text.relationship_lines({
+    relationships={{kind='<type: histfig hf link motherst>',target_name='Momuz Lilumuzol'}},
+    friends={{kind='close_friend',target_name='Urist McTester'},
+        {kind='close_friend',target_name='Urist McTester'}}},68)
+assert_true(#relationships==3 and relationships[1]=='Relationships' and
+    relationships[2]=='- Mother: Momuz Lilumuzol' and relationships[3]=='- Close friend: Urist McTester',
+    'memoire introduction appends deduplicated current relationships from the latest profile')
 local chapter_requests = reqscript('lorekeeper/view_request')
 assert_true(chapter_requests.read_chapter(1,'../another.json') == nil and
     chapter_requests.read_chapter(1,'2.monthly.abc.json') == nil,

@@ -55,7 +55,7 @@ class MonthlyBiographyTests(unittest.TestCase):
     def test_introduction_then_months_descending_across_years(self):
         self.payload['historical_episodes']['events'] = [self.event(), self.event(year=101,identity=2)]
         self.run_book()
-        self.assertEqual(self.calls[0]['chapter_title'], 'Introduction and recollections')
+        self.assertEqual(self.calls[0]['chapter_title'], 'Introduction')
         self.run_book(); self.run_book()
         self.assertEqual([c['key'] for c in self.state['chapters']], ['intro','000102-01','000101-01'])
 
@@ -182,7 +182,7 @@ class MonthlyBiographyTests(unittest.TestCase):
             process_views(save)
             self.assertEqual(model.call_count, 2)
         state = read_json(views/'1.json')
-        self.assertEqual([c['title'] for c in state['chapters']], ['Introduction and recollections','Year 102 / Slate'])
+        self.assertEqual([c['title'] for c in state['chapters']], ['Introduction','Year 102 / Slate'])
 
     @unittest.skipUnless(os.environ.get('LOREKEEPER_LIVE_MONTHLY_TEST') == '1',
                          'Explicit opt-in: two authenticated model calls in an isolated save')

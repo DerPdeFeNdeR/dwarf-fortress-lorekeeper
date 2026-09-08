@@ -33,7 +33,7 @@ class WritingBriefTests(unittest.TestCase):
 
     def item(self, intro=False):
         return dict(id='monthly:1', kind='dwarf_history', context='Legacy instructions',
-                    raw=json.dumps(dict(chapter_title='Introduction and recollections' if intro else 'Year 102 / Slate',
+                    raw=json.dumps(dict(chapter_title='Introduction' if intro else 'Year 102 / Slate',
                         chapter_evidence={'heard': {'teller': 'Urist ò', 'year': 35}},
                         identity={'name': 'Minkot'}, prior_narrative={'text': 'Invented siege'},
                         previous_chapter='Invented occupation routine',
