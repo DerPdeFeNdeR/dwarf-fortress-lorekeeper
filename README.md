@@ -2,16 +2,53 @@
 
 **Turn your fortress's lives and events into stories you can read without leaving Dwarf Fortress.**
 
-Lorekeeper is an experimental DFHack companion for Steam Dwarf Fortress. It collects bounded game information, remembers meaningful changes, and uses an external model worker to write:
+## About Lorekeeper
 
-- **Dwarf Memoires:** first-person accounts shaped by personality, values, relationships, interests, and supported mental attributes. An introduction comes first, followed by significant monthly chapters, newest month first.
-- **Fortress Chronicles:** current-year drafts and chapters queued after an observed year rollover, with one saved, personality-shaped dwarf narrator per fortress year.
-- **Specific stories:** supported deaths, wounds, craftsmanship, family/friend context, and tales heard in performances—not just inventories of likes and dislikes.
-- **In-game readers:** saved prose stays readable while new writing happens in the background. Raw inspection and technical timelines remain available.
+Every dwarf in Dwarf Fortress has a history, but much of that history is easy to
+miss while you are managing a fortress. Lorekeeper turns those small moments
+into stories you can read inside the game.
 
-The aim is lively, sometimes funny, sometimes somber narration grounded in the game. Motives may be interpreted; events, dialogue, people, and outcomes must not be invented. Memoires restrict inputs to personal knowledge; Chronicles have broader fortress scope. Both display an interpretation notice. Coverage checks catch selected omissions, not every possible factual error.
+Select a dwarf and open their Memoire to see the fortress through their eyes.
+The first page is their **Introduction**—a glimpse of who they are, what matters
+to them, and how they see the world. Their known family and friends appear
+alongside it. As they live through more of fortress life, important experiences
+become monthly chapters.
 
-This is a **developer playtest**, not a one-click Workshop release or an exhaustive history recorder. **Back up your saves before testing.**
+The stories are personal to each dwarf. A curious child may describe the same
+fortress differently from a solemn veteran, and a dwarf who hears a tale may
+remember it as something told to them rather than something they witnessed
+themselves.
+
+Lorekeeper also keeps a **Fortress Chronicle**. Each year, one living dwarf
+becomes the voice of that year's account, describing the deaths, celebrations,
+discoveries, performances, conflicts, and other moments that shaped the
+fortress.
+
+The stories appear in their own in-game readers, so you can return to them while
+you play. Older chapters remain available as new ones are written, and a
+separate history view lets you look back at the changes behind the stories.
+
+Lorekeeper is currently a developer playtest for Steam Dwarf Fortress. It is
+designed to make your fortress feel more personal, memorable, and alive.
+**Back up your saves before testing.**
+
+## Screenshots
+
+### A Fortress Chronicle
+
+![A Fortress Chronicle](docs/images/fortress_chronicle_year_102.png)
+
+### A Dwarf Memoire
+
+![A Dwarf Memoire](docs/images/memoire_1.png)
+
+### A Child Dwarf's Memoire
+
+![A child dwarf's Memoire](docs/images/memoire_child.png)
+
+### An Introduction and Relationships
+
+![A Memoire Introduction with relationships](docs/images/memoire_child_introduction.png)
 
 ## Player setup (Windows)
 
