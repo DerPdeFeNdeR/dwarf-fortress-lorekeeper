@@ -3,11 +3,9 @@ import json
 import os
 import signal
 import subprocess
-import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from pathlib import Path
 
 
 @dataclass
@@ -63,36 +61,7 @@ class OllamaAdapter:
         return ModelResponse(result, metrics)
 
 
-class CodexAdapter:
-    def __init__(self, command='codex', runner=None):
-        self.command = command
-        self.runner = runner or run_process
-
-    def generate(self, prompt, schema, settings):
-        with tempfile.TemporaryDirectory(prefix='lorekeeper-model-') as directory:
-            schema_path = Path(directory) / 'schema.json'
-            output_path = Path(directory) / 'response.json'
-            schema_path.write_text(json.dumps(schema), encoding='utf-8')
-            command = [self.command, 'exec', '--model', settings['model'],
-                '-c', 'model_reasoning_effort=' + json.dumps(settings['reasoning_effort']),
-                '--ephemeral', '--sandbox', 'read-only', '--output-schema', str(schema_path),
-                '-o', str(output_path),
-                'Follow the supplied writing task and return only its requested structured output.']
-            completed = self.runner(command, input=prompt, text=True, capture_output=True,
-                                    check=False, timeout=180, encoding='utf-8')
-            if completed.returncode != 0:
-                detail = (completed.stderr or completed.stdout or 'Codex exited unsuccessfully').strip()
-                raise RuntimeError(f'Codex generation failed: {detail[-1000:]}')
-            try:
-                result = json.loads(output_path.read_text(encoding='utf-8'))
-            except (FileNotFoundError, json.JSONDecodeError) as exc:
-                raise RuntimeError('Codex did not produce valid structured output') from exc
-            return ModelResponse(result, {})
-
-
-def select_adapter(provider, *, codex_command='codex', runner=None):
+def select_adapter(provider):
     if provider == 'ollama':
         return OllamaAdapter()
-    if provider == 'codex-cli':
-        return CodexAdapter(codex_command, runner)
     raise ValueError(f'Unsupported model provider: {provider}')

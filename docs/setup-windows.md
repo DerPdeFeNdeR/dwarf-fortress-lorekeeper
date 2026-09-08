@@ -38,31 +38,6 @@ From PowerShell in the Lorekeeper checkout, start the native worker:
 Keep this window open while playing. The worker should report
 `writer ollama / qwen3:8b`. Run only one worker for a save directory.
 
-## Luna and Codex (optional)
-
-Install the Windows Codex CLI using the [official Codex CLI instructions](https://learn.chatgpt.com/docs/codex/cli),
-then authenticate it in PowerShell:
-
-```powershell
-codex --version
-codex login
-codex login status
-```
-
-In the same PowerShell window, select Luna and start the worker:
-
-```powershell
-$env:LOREKEEPER_WRITER_PROFILE = 'luna-literary'
-$env:LOREKEEPER_PROVIDER = 'codex-cli'
-$env:LOREKEEPER_MODEL = 'gpt-5.6-luna'
-$env:LOREKEEPER_REASONING_EFFORT = 'low'
-.\helper\start_watcher.ps1 -Python python
-```
-
-Windows Codex is the recommended Luna setup. WSL Codex is an optional alternative
-and has separate `PATH` and login state. Luna's writing strategy is separate from
-Qwen's strategy.
-
 ## Play
 
 Select a dwarf and press **Ctrl+L**, or click **Read Memoire**. Press **U** to

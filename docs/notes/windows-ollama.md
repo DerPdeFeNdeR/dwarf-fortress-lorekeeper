@@ -30,7 +30,7 @@ The fixture temporary directory was cleaned up by the test, so its rejected
 candidate is not available for this run. A diagnostic rerun must retain it.
 
 During generation `ollama ps` reported 7.8 GB, 20%/80% CPU/GPU, 16,384 context.
-Local generation is not currently faster than the earlier ~11-second Luna sample.
+Local generation is not currently faster than the earlier measured 11-second baseline.
 No live worker cutover was performed because annual validation failed. The WSL
 task remained untouched. Game acceptance remains pending.
 
@@ -53,6 +53,6 @@ Keep previous stories on failures; never claim coverage checks establish every
 prose assertion. Original annual immutability and personal-knowledge rules apply.
 
 Ollama defaults to Qwen3 8B, thinking disabled, schema JSON, temperature zero,
-16K context, 2K output cap, 30-minute keep-alive. Large real inputs and GPU memory
-under play still need validation. Codex is an explicit alternative provider, not
-an automatic fallback. Existing WSL startup task must not race the native worker.
+16K context, 2K output cap, 30-minute keep-alive. Large real inputs and GPU
+memory under play still need validation. Alternative providers are explicit and are
+not automatic fallbacks. Existing WSL startup task must not race the native worker.

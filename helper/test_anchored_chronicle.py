@@ -67,8 +67,9 @@ class AnchoredChronicleTests(unittest.TestCase):
                 assemble(self.item(), response)
 
     def test_live_adapter_uses_fixed_plan_and_preserves_cache_envelope(self):
-        with patch('model_adapters.OllamaAdapter.generate', return_value=ModelResponse({'p0': '', 'p1': ''}, {})) as generate:
+        with patch('model_adapters.OllamaAdapter.generate', return_value=ModelResponse(
+                {'text': '{{A0}} {{A1}} {{A2}}'}, {})) as generate:
             result = run_batch([self.item()], settings={'provider': 'ollama', 'model': 'qwen3:8b'})
-        self.assertEqual(generate.call_args.kwargs['schema']['required'], ['p0', 'p1'])
+        self.assertEqual(generate.call_args.kwargs['schema']['required'], ['text'])
         self.assertEqual(result['results'][0]['id'], 'year')
         self.assertEqual(result['source'], 'ollama')

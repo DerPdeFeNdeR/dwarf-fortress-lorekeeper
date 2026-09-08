@@ -39,7 +39,7 @@ The enriched history-story path was verified afterward:
 
 - `lorekeeper/test` reported 25 passing DFHack tests.
 - `lorekeeper/story` queued the versioned `dwarf-history-v2` request.
-- The Codex helper processed one fresh job and returned a high-confidence
+- The local watcher processed one fresh job and returned a high-confidence
   story using the exact timeline inputs.
 
 The hands-off watcher path was verified afterward:

@@ -1,17 +1,15 @@
 {
   "profiles": {
-    "qwen-short": {
+    "qwen-thread": {
       "provider": "ollama",
       "model": "qwen3:8b",
-      "strategies": {"memoire": "personal-brief", "chronicle": "anchored"},
-      "model_options": {"temperature": 0.5, "think": false},
-      "strategy_options": {"memoire": {"quiet_words": [50, 80]}}
-    },
-    "luna-low": {
-      "provider": "codex-cli",
-      "model": "gpt-5.6-luna",
-      "reasoning_effort": "low",
-      "strategies": {"memoire": "luna-literary", "chronicle": "luna-literary"}
+      "strategies": {
+        "memoire": "personal-thread",
+        "chronicle": "anchored-stream"
+      },
+      "model_options": {
+        "temperature": 0.6
+      }
     }
   }
 }

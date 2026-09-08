@@ -57,8 +57,7 @@ the game remains playable while the worker writes in the background.
 To stop the worker, focus its PowerShell window and press Ctrl+C. Run only one
 worker for a save directory. Keep regular backups of your save files. If the
 reader says the worker is unavailable, confirm Ollama is running and that the
-PowerShell window reports `writer ollama / qwen3:8b`. The optional Codex/Luna
-setup below is for developers; it is not required for the Qwen playtest.
+PowerShell window reports `writer ollama / qwen3:8b`.
 
 Standalone guides: [Windows player setup](docs/setup-windows.md) and
 [Linux player setup](docs/setup-linux.md).
@@ -69,19 +68,13 @@ Standalone guides: [Windows player setup](docs/setup-windows.md) and
 | --- | --- | --- |
 | DFHack Lua scripts | Windows game | Bounded collection, on-demand profiles, overlays and readers |
 | Save-directory watcher | Windows or WSL | Prepare timelines, invoke the selected model, validate/cache stories |
-| Ollama (default) | Windows | Local Qwen generation outside the game loop |
-| Codex CLI (optional) | Same environment as watcher | Authenticated Luna generation outside the game loop |
+| Ollama (local) | Windows | Local Qwen generation outside the game loop |
 
 There are **two separate startup mechanisms**: DFHack starts collection on fortress load; you start the watcher separately (manually or with an optional task). The watcher does **not** currently launch with DFHack. Once both run, reading and updates happen entirely in-game—no manual queue processing.
 
 ## Windows developer installation
 
-Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**, and Windows Codex for optional Luna testing. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended setup for both Qwen and Luna; WSL remains an optional alternative.
-
-Codex sign-in is needed only for the optional Luna path. The player workflow
-defaults to local **`qwen3:8b`** through Ollama. Luna uses **`gpt-5.6-luna` / low
-reasoning** when selected and requires access through the authenticated Codex CLI.
-See [official authentication guidance](https://learn.chatgpt.com/docs/auth).
+Verified development setup: Steam DF **0.53.16**, DFHack **53.16-r1.1**, Windows Python **3.13**. Other game/DFHack versions require compatibility testing. Python code uses 3.10+ syntax and standard-library modules only. The native Windows watcher is the recommended setup.
 
 Commands are labeled **PowerShell**, **WSL**, or **DFHack**. Copy commands only, not terminal prompts such as `PS C:\Users\...>` or error output.
 
@@ -127,56 +120,7 @@ ollama pull qwen3:8b
 
 The watcher uses Ollama at `http://127.0.0.1:11434` by default. It sends
 schema-constrained JSON, disables Qwen thinking for latency, and keeps the model
-loaded between requests. See [worker configuration](helper/README.md#configuration)
-for provider settings and the optional hosted fallback.
-
-### Optional: use the Codex/Luna provider instead
-
-The native Windows watcher can use a Windows Codex CLI installation. Follow the
-[official Codex CLI installation instructions](https://learn.chatgpt.com/docs/codex/cli),
-then authenticate that same Windows installation. In PowerShell, verify it:
-
-```powershell
-codex --version
-codex login
-codex login status
-```
-
-Select Luna for the current worker process:
-
-```powershell
-$env:LOREKEEPER_WRITER_PROFILE = 'luna-literary'
-$env:LOREKEEPER_PROVIDER = 'codex-cli'
-$env:LOREKEEPER_MODEL = 'gpt-5.6-luna'
-$env:LOREKEEPER_REASONING_EFFORT = 'low'
-.\helper\start_watcher.ps1 -Python python
-```
-
-WSL remains an optional alternative, useful when the Linux Codex CLI is already
-installed there. Use the **same WSL user** that will run the watcher. The documented Linux installer is:
-
-```bash
-curl -fsSL https://chatgpt.com/codex/install.sh | sh
-```
-
-This downloads and executes an installer; inspect it first if required by your development policy. Follow its PATH instructions and reopen WSL if necessary. From the repository root in **WSL**, verify login and model access:
-
-```bash
-command -v codex
-codex --version
-codex login
-codex login status
-```
-
-Complete the ChatGPT browser login. If its callback fails, `codex login --device-auth` is an alternative where your account permits device login. Windows and WSL Codex installations have separate PATHs and authentication state.
-
-Check model access with one small **real model request** in WSL:
-
-```bash
-codex exec --model gpt-5.6-luna -c 'model_reasoning_effort="low"' --ephemeral --sandbox read-only "Reply with exactly READY. Do not inspect files or run commands."
-```
-
-If unavailable, choose a model supported by your Codex account and set `LOREKEEPER_MODEL`; do not assume equal quality/speed. See [worker configuration](helper/README.md#configuration). Resolve login/model access before testing generation in-game.
+loaded between requests. See [worker configuration](helper/README.md#configuration).
 
 ### 4. Connect the checkout to DFHack
 
@@ -208,7 +152,7 @@ The **`init` subdirectory matters**. Add once:
 lorekeeper/autostart
 ```
 
-This starts citizen collection, supported-event indexing, the annual monitor and environmental observations when a fortress loads. It does not start Codex. **Fully restart Dwarf Fortress after these configuration changes.** See [DFHack's configuration reference](https://docs.dfhack.org/en/stable/docs/Core.html#configuration-files).
+This starts citizen collection, supported-event indexing, the annual monitor and environmental observations when a fortress loads. It does not start the worker; add it separately if needed. **Fully restart Dwarf Fortress after these configuration changes.** See [DFHack's configuration reference](https://docs.dfhack.org/en/stable/docs/Core.html#configuration-files).
 
 ### 5. Start the watcher for a first test
 
@@ -219,8 +163,7 @@ native Windows command is run from the repository root in **PowerShell**:
 .\helper\start_watcher.ps1 -Python python
 ```
 
-For the optional Codex/Luna WSL path, use this command from the repository root
-in **WSL**:
+For WSL, use this command from the repository root in **WSL**:
 
 ```bash
 python3 helper/watch_save_directory.py "/mnt/c/Program Files (x86)/Steam/steamapps/common/Dwarf Fortress/save"
@@ -348,8 +291,7 @@ Start-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'
 | Unknown command | Use `lorekeeper/test`, not `lorekeeper test` or `lorekeeper/tests`. Check the script path and restart DF. |
 | Missing button | Try the command, then `gui/overlay`; saved enable/position preferences are respected. |
 | Collector counters unchanged | Unpause. After `collect stop`, use `collect start` to resume this session. |
-| Historian offline/pending | Check Ollama, the native Python process, and the watcher log. For optional Luna, check the WSL task and Codex login. |
-| Codex missing in task | For the optional Luna path, run `wsl.exe -- bash -lc 'command -v codex; codex login status'`. The Linux executable/login must work in that shell, not only your interactive terminal. |
+| Historian offline/pending | Check Ollama, the native Python process, and the watcher log. |
 | Task Ready after logon | Inspect `Get-ScheduledTaskInfo -TaskName 'Lorekeeper Queue Watcher'` and the watcher log. Manual start is a diagnostic, not the desired permanent workflow. |
 | Another worker owns the save root | Stop the duplicate worker/task; do not delete the lock file to bypass ownership. |
 | Save-path error | Verify Steam location, existing `save` directory and write permission; keep the whole path in one quoted argument. |
@@ -362,11 +304,10 @@ Start-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'
 Files live beside saves: `lorekeeper-history.jsonl`, `lorekeeper-history-index/`, `lorekeeper-views/`, `lorekeeper-chronicles/`, and `lorekeeper-environment/`. The save root also has a worker heartbeat/lock. Back up the full region folder **including sidecars**; deleting caches can lose generated prose. Reloaded saves can have separate recording branches.
 
 Structured game information—including names, relationships, and events—is sent to
-the selected model provider. The default Qwen setup sends it to local Ollama; the
-optional Luna path uses your authenticated Codex client. This is **not fully
-offline** in every configuration. Credentials stay outside Lua/save files. Never
-commit credentials, private save data, generated profiles or rejected drafts to
-this public repository. The HTTP API prototype is not used by these readers.
+the local model provider. This is **not fully offline** in every configuration.
+Credentials stay outside Lua/save files. Never commit credentials, private save
+data, generated profiles or rejected drafts to this public repository. The HTTP
+API prototype is not used by these readers.
 
 To disable, stop the scheduled task with `Stop-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'`, then use `Disable-ScheduledTask -TaskName 'Lorekeeper Queue Watcher'`. Remove only the Lorekeeper lines added to `script-paths.txt` and `init/dfhack.init`, and restart DF. Keep saved data if you may return. Stopping only the citizen collector does not stop the separate annual/environment monitor.
 

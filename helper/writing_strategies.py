@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import anchored_chronicle
-import luna_writing
 from model_input import compact_raw
 from writer_settings import STRATEGY_VERSIONS
 from writing_brief import is_writing_task, build_brief, build_threaded_brief, prose_schema, adapt_prose
@@ -22,10 +21,6 @@ class PreparedWriting:
         return dict(strategy=self.strategy, strategy_version=self.version,
                     prompt_digest=hashlib.sha256(self.prompt.encode()).hexdigest(),
                     schema_digest=hashlib.sha256(json.dumps(self.schema, sort_keys=True).encode()).hexdigest())
-
-
-def literary_prompt(items):
-    return luna_writing.build_prompt(items)
 
 
 def direct_prompt(items, writing=False, options=None):
@@ -63,27 +58,6 @@ def prepare(items, settings):
         raise ValueError('Batch mixes incompatible writing task types')
     kind = kinds.pop()
     strategy = settings['strategies'].get(kind, 'translation')
-    if kind in ('legacy', 'translation') and settings['model'] == 'gpt-5.6-luna':
-        strategy = 'luna-literary'
-    if strategy == 'luna-literary':
-        prompt, schema = luna_writing.prepare(items)
-        return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], prompt, schema)
-    if strategy == 'anchored':
-        if len(items) != 1:
-            raise ValueError('Anchored chronicles require one chapter per request')
-        if anchored_chronicle.supported(items[0]):
-            context, evidence = anchored_chronicle.brief(items[0])
-            return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
-                                   anchored_chronicle.schema(items[0]))
-        strategy = 'compact'  # No mandatory facts to assemble; record the actual fallback.
-    if strategy == 'anchored-weave':
-        if len(items) != 1:
-            raise ValueError('Woven chronicles require one chapter per request')
-        if anchored_chronicle.supported(items[0]):
-            context, evidence = anchored_chronicle.weave_brief(items[0])
-            return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
-                                   anchored_chronicle.weave_schema(items[0]))
-        strategy = 'compact'
     if strategy == 'anchored-stream':
         if len(items) != 1:
             raise ValueError('Stream chronicles require one chapter per request')
@@ -92,7 +66,7 @@ def prepare(items, settings):
             return PreparedWriting(strategy, STRATEGY_VERSIONS[strategy], context + '\n\n' + evidence,
                                    anchored_chronicle.stream_schema(items[0]))
         strategy = 'compact'
-    writing = strategy in ('personal-brief', 'personal-thread', 'compact')
+    writing = strategy == 'personal-thread'
     schema = prose_schema(items) if writing else json.loads(Path(__file__).with_name('codex_batch_schema.json').read_text())
     results = schema['properties']['results']
     results.update(minItems=len(items), maxItems=len(items))
@@ -109,15 +83,14 @@ def prepare(items, settings):
 
 def decode(prepared, items, response):
     diagnostics = None
-    if prepared.strategy == 'anchored':
-        response = anchored_chronicle.assemble(items[0], response)
-        diagnostics = response.get('writing_diagnostics')
-    if prepared.strategy == 'anchored-weave':
-        response = anchored_chronicle.assemble_weave(items[0], response)
-        diagnostics = response.get('writing_diagnostics')
     if prepared.strategy == 'anchored-stream':
+        if isinstance(response, dict) and isinstance(response.get('results'), list):
+            row = response['results'][0] if response['results'] else None
+            if not isinstance(row, dict) or 'text' not in row:
+                raise ValueError('Chronicle stream response must contain id/text rows')
+            response = {'text': row['text']}
         response = anchored_chronicle.assemble_stream(items[0], response)
         diagnostics = response.get('writing_diagnostics')
-    if prepared.strategy in ('anchored', 'anchored-weave', 'anchored-stream', 'personal-brief', 'personal-thread', 'compact'):
+    if prepared.strategy in ('personal-thread', 'compact'):
         response = adapt_prose(response)
     return response, diagnostics

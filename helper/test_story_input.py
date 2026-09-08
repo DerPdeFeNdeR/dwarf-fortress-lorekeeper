@@ -19,21 +19,25 @@ class StoryInputTests(unittest.TestCase):
             (save / 'lorekeeper-history.jsonl').write_text(json.dumps(record(1, -100)) + '\n')
             request_path = views / '1.request.json'
             with patch('history_view.run_batch', return_value={'results': [dict(text='Story')]}) as model:
-                for nonce, name, effort in [(1, 'gpt-5.6-luna', 'low'),
-                                             (2, 'gpt-5.6-luna', 'low'),
-                                             (3, 'gpt-5.6-luna', 'medium'),
-                                             (4, 'qwen3:8b', 'medium')]:
-                    profile = 'qwen-fast' if name == 'qwen3:8b' else 'luna-literary'
-                    with patch.dict(os.environ, LOREKEEPER_WRITER_PROFILE=profile, LOREKEEPER_REASONING_EFFORT=effort):
+                for nonce, effort, options in [(1, 'low', None),
+                                              (2, 'low', None),
+                                              (3, 'medium', None),
+                                              (4, 'low', '{"temperature": 0.65}')]:
+                    overrides = dict(LOREKEEPER_WRITER_PROFILE='qwen-thread', LOREKEEPER_REASONING_EFFORT=effort)
+                    if options is not None:
+                        overrides['LOREKEEPER_MODEL_OPTIONS'] = options
+                    with patch.dict(os.environ, **overrides):
                         write_results(request_path, dict(unit_id=1, nonce=nonce))
                         process_views(save)
                         result = load_results(views / '1.json')
-                self.assertEqual(result['story_generation'], resolve_settings(dict(provider='ollama', model=name, reasoning_effort=effort)))
+                expected = resolve_settings(dict(provider='ollama', model='qwen3:8b', reasoning_effort='low',
+                                                 model_options={'temperature': 0.65}))
+                self.assertEqual(result['story_generation'], expected)
                 self.assertEqual(model.call_count, 3)
                 self.assertEqual(model.call_args.kwargs['settings']['model'], 'qwen3:8b')
                 process_views(save)  # Same completed request: no background regeneration.
                 self.assertEqual(model.call_count, 3)
-                with patch.dict(os.environ, LOREKEEPER_WRITER_PROFILE='qwen-fast', LOREKEEPER_REASONING_EFFORT='medium'):
+                with patch.dict(os.environ, LOREKEEPER_WRITER_PROFILE='qwen-thread', LOREKEEPER_REASONING_EFFORT='medium'):
                     with patch('history_view.HISTORIAN_CONTEXT', 'Updated historian rules'):
                         write_results(request_path, dict(unit_id=1, nonce=5))
                         process_views(save)

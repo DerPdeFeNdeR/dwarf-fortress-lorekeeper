@@ -59,4 +59,4 @@ and scrolling stay usable. A dwarf without cached prose should show a factual
 overview first. Visual responsiveness/fallback confirmation by the user remains
 pending for further latency comparisons. The user subsequently confirmed that
 the window updated without R. Follow-up model testing is recorded in
-`luna-biography-validation.md`.
+[`qwen-writing-rewrite.md`](qwen-writing-rewrite.md).

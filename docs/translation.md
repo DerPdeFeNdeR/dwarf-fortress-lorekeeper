@@ -4,7 +4,7 @@ Current pipeline: Windows DFHack writes bounded profiles/requests beside saves;
 the native Windows `helper/watch_save_directory.py` prepares timelines and model
 inputs, invokes local Ollama/Qwen by default, validates output and writes caches.
 Readers poll those prepared files without network calls or history parsing in the
-game thread. WSL remains an optional environment for the Codex/Luna profile.
+game thread. WSL remains an optional environment.
 
 ## Current story workflow
 
@@ -18,11 +18,10 @@ game thread. WSL remains an optional environment for the Codex/Luna profile.
 - Current view schema is 26, profile schema 9, monthly request protocol 1/book 2,
   annual request schema 2. See [contracts](schema.md) for storage and provenance.
 
-The worker explicitly selects the registered `qwen-fast` profile (`qwen3:8b`) by
-default. Luna's `luna-literary` profile is separate and requires Codex access.
-Model/profile settings can be configured without changing personal Codex defaults.
-Credentials stay outside Lua and saves. Structured game data is sent to the model
-provider; this is not a fully offline workflow. See
+The worker explicitly selects the registered `qwen-thread` profile (`qwen3:8b`) by
+default. Model/profile settings can be configured without changing personal model
+defaults. Credentials stay outside Lua and saves. Structured game data is sent to
+local Ollama by default; this is not a fully offline workflow. See
 [worker documentation](../helper/README.md).
 
 ## Evidence and cache safeguards

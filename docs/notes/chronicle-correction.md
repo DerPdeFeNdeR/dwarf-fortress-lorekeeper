@@ -32,7 +32,7 @@ checking coverage again. `repair=True` consumes the ordinary single attempt.
 
 Tests cover missing dates, abbreviated names, unrelated/overlapping/bad edits,
 preserved prose, unchanged full coverage, offline failure, durable attempt limits,
-successful generation/correction/cache behavior. The existing low-effort Luna
+successful generation/correction/cache behavior. The existing cleanup `qwen-thread`
 model and authentication path are unchanged. Prompt design follows explicit
 success criteria and empirical validation from [OpenAI prompting guidance](https://developers.openai.com/api/docs/guides/prompt-engineering).
 

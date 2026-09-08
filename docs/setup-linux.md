@@ -32,30 +32,7 @@ bash helper/start_watcher.sh "/path/to/Dwarf Fortress/save"
 ```
 
 Ollama must be reachable at `http://127.0.0.1:11434` unless configured otherwise.
-The worker should report the `qwen-fast` profile and `qwen3:8b`.
-
-## Luna and Codex (optional)
-
-Install and authenticate the Linux Codex CLI using the [official instructions](https://learn.chatgpt.com/docs/codex/cli):
-
-```bash
-codex --version
-codex login
-codex login status
-```
-
-Select Luna for this worker process:
-
-```bash
-export LOREKEEPER_WRITER_PROFILE='luna-literary'
-export LOREKEEPER_PROVIDER='codex-cli'
-export LOREKEEPER_MODEL='gpt-5.6-luna'
-export LOREKEEPER_REASONING_EFFORT='low'
-bash helper/start_watcher.sh "/path/to/Dwarf Fortress/save"
-```
-
-Qwen and Luna have model-specific writing strategies. The transport and file
-pipeline are shared, but Luna cannot select Qwen's writing strategies.
+The worker should report the `qwen-thread` profile and `qwen3:8b`.
 
 ## Play
 
@@ -63,4 +40,3 @@ Select a dwarf and press **Ctrl+L**, or click **Read Memoire**. Press **U** to
 request an update. Run `lorekeeper/chronicles` from the DFHack launcher and press
 **D** for a year-so-far Chronicle. Keep the watcher running while you play and
 stop it with Ctrl+C when finished. Run only one worker for a save directory.
-

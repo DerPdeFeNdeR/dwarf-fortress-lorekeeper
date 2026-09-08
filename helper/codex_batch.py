@@ -6,7 +6,7 @@ from pathlib import Path
 
 from model_adapters import select_adapter, run_process
 from writer_settings import generation_settings, resolve_settings
-from writing_strategies import prepare, decode, literary_prompt
+from writing_strategies import prepare, decode
 
 MAX_BATCH_SIZE = 50
 PROMPT_VERSION = '1'
@@ -29,7 +29,7 @@ def normalize_items(items):
 
 
 def build_prompt(items):
-    return literary_prompt(items)
+    return prepare_batch(items, resolve_settings({'provider': 'ollama'})).prompt
 
 
 def build_ollama_prompt(items):
@@ -41,9 +41,13 @@ def prepare_batch(items, settings=None):
     return prepare(normalize_items(items), resolve_settings(settings) if settings is not None else generation_settings())
 
 
-def validate_results(items, response):
+def validate_results(items, response, strategy=None):
     if not isinstance(response, dict):
         raise ValueError('Model response must be an object')
+    if strategy == 'anchored-stream' and set(response) == {'text'} and isinstance(response['text'], str):
+        response = dict(results=[dict(id=items[0]['id'], text=response['text'],
+                                      explanation='Generated literary interpretation of supplied game events.',
+                                      category='narrative', confidence='low')])
     results = response.get('results')
     if not isinstance(results, list) or len(results) != len(items):
         raise ValueError('Model result count does not match the request count')
@@ -52,24 +56,31 @@ def validate_results(items, response):
     if [result.get('id') for result in results] != [item['id'] for item in items]:
         raise ValueError('Model results must preserve request order and ids')
     for result in results:
-        if not all(isinstance(result.get(field), str) and result[field]
-                   for field in ('id', 'text', 'explanation', 'category', 'confidence')):
-            raise ValueError('Model returned an incomplete translation result')
+        required = ('id', 'text') if strategy == 'anchored-stream' else ('id', 'text', 'explanation', 'category', 'confidence')
+        for key in required:
+            if not isinstance(result.get(key), str) or not result[key]:
+                raise ValueError('Model returned an incomplete translation result')
+        if strategy == 'anchored-stream':
+            result.setdefault('explanation', 'Generated literary interpretation of supplied game events.')
+            result.setdefault('category', 'narrative')
+            result.setdefault('confidence', 'low')
         if result['confidence'] not in {'high', 'medium', 'low'}:
-            raise ValueError('Model returned an invalid confidence value')
-    return dict(schema_version=1, source='codex-cli', prompt_version=PROMPT_VERSION, results=results)
+            raise ValueError('Model returned an incomplete translation result')
+        if strategy != 'anchored-stream' and result['category'] not in ('narrative', 'social', 'work', 'dwarf', 'history', 'environment', 'other'):
+            raise ValueError('Model returned an invalid category value')
+    return dict(schema_version=1, source='ollama', prompt_version=PROMPT_VERSION, results=results)
 
 
-def run_batch(items, codex_command='codex', runner=None, *, settings=None, adapter=None):
+def run_batch(items, *, settings=None, adapter=None):
     items = normalize_items(items)
     if not items:
-        return dict(schema_version=1, source='codex-cli', prompt_version=PROMPT_VERSION, results=[])
+        return dict(schema_version=1, source='ollama', prompt_version=PROMPT_VERSION, results=[])
     settings = resolve_settings(settings) if settings is not None else generation_settings()
     prepared = prepare(items, settings)
-    adapter = adapter or select_adapter(settings['provider'], codex_command=codex_command, runner=runner)
+    adapter = adapter or select_adapter(settings['provider'])
     generated = adapter.generate(prompt=prepared.prompt, schema=prepared.schema, settings=settings)
     response, diagnostics = decode(prepared, items, generated.payload)
-    result = validate_results(items, response)
+    result = validate_results(items, response, prepared.strategy)
     result.update(source=settings['provider'], generation=settings,
                   writing=prepared.provenance(), model_metrics=generated.metrics)
     if diagnostics is not None:

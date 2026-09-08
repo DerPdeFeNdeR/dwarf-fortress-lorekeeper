@@ -24,7 +24,6 @@ possessions, gifts, or family stories, preventing item-type preferences such as
 `BIN` from becoming invented memories.
 
 The active profile is `qwen-thread`: Memoire `personal-thread`, Chronicle
-`anchored-stream`, Ollama `qwen3:8b`. Luna remains behind its independent
-`luna-literary` strategy. The full Python suite passed 219 tests on this date
-(seven optional tests skipped). New drafts require a reader Update/D request;
-existing completed chapters are not rewritten automatically.
+`anchored-stream`, Ollama `qwen3:8b`. The full Python suite passed 219 tests on
+this date (seven optional tests skipped). New drafts require a reader Update/D
+request; existing completed chapters are not rewritten automatically.

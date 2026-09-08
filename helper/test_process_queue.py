@@ -34,7 +34,7 @@ class QueueTests(unittest.TestCase):
             self.assertEqual(data['a']['text'], 'cached')
             self.assertEqual(data['b']['text'], 'Satisfied')
 
-    def test_empty_or_fully_cached_queue_does_not_call_codex(self):
+    def test_empty_or_fully_cached_queue_does_not_call_batch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             queue = root / 'queue.jsonl'

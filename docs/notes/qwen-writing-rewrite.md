@@ -16,8 +16,8 @@ The small voice guide covers five delivery facets and the four mental attributes
 not every personality dimension. More nuanced voice remains future tuning.
 
 Writing output uses id/text only. The compatibility envelope is supplied in code
-with narrative category and low confidence, not model self-certification. Codex
-and legacy translation/correction contracts retain their previous behavior.
+with narrative category and low confidence, not model self-certification. Legacy
+translation/correction contracts retain their previous behavior.
 
 The ignored captured real Chronicle was compared without publishing candidates:
 
@@ -101,4 +101,4 @@ output at production chapter paths.
 
 The native worker must restart to load Python changes. Close/reopen Chronicles
 to load the reader changes; no script-path change or DF restart is required.
-No new startup task was registered and no personal Codex settings were changed.
+No new startup task was registered and no global user model settings were changed.

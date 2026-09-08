@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Process Lorekeeper JSONL translation jobs through one Codex batch."""
+"""Process a Lorekeeper JSONL translation queue in one generation batch."""
 
 from __future__ import annotations
 

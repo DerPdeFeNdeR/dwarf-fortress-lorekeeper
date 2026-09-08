@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Watch a Lorekeeper queue and process new jobs through Codex."""
+"""Watch a Lorekeeper queue and process new jobs through a generation batch."""
 
 from __future__ import annotations
 

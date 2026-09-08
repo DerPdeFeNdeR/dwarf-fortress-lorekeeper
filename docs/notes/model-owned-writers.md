@@ -1,70 +1,25 @@
-# Model-owned writers — 2026-09-07
+# Model-owned writers — cleanup profile set
 
-Strategies belong to an explicitly registered model. The router resolves that
-model's allowed strategies before preparing prompts or selecting a transport.
-Unknown models and cross-model strategies fail before any model call. Adding a
-model requires an intentional policy registration and its own strategy tests;
-changing a model string does not inherit Qwen's policy.
+This branch keeps a single active writing configuration for cleanup testing:
 
-Supported profiles in `helper/writer_settings.py`:
+- Active profile: `qwen-thread` in `helper/writer_settings.py`
+- Active model: `qwen3:8b` (Ollama provider)
+- Strategy map: Memoire → `personal-thread`, Chronicle → `anchored-stream`
 
-| Profile | Model | Memoire | Chronicle |
-| --- | --- | --- | --- |
-| `qwen-fast` (default) | `qwen3:8b` | personal brief | assembled facts with optional reflections |
-| `qwen-weave` (experiment) | `qwen3:8b` | personal brief | anchor-weaving paragraphs |
-| `qwen-stream` | `qwen3:8b` | personal brief | connected anchored stream |
-| `qwen-thread` (active playtest) | `qwen3:8b` | personal thread | connected anchored stream |
-| `qwen-compact` | `qwen3:8b` | personal brief | compact whole-passage generation |
-| `luna-literary` | `gpt-5.6-luna` | full-context passage | full-context passage |
+Router behavior is strict: model + strategy combinations are validated before any
+model call. Unsupported combinations now fail during settings resolution.
 
-Qwen's anchored annual route falls back to its compact route when there are no
-mandatory anchors. Provenance records that actual fallback. `qwen-compact` is an
-evaluation option, not a verified improvement over the default.
+## Legacy profiles
 
-`qwen-weave` lets Qwen write paragraph flow around exact `{{A0}}` fact markers;
-Python replaces those markers with verified clauses and runs the existing coverage
-checks. Exact duplicate anchors are removed and missing markers are repaired only
-when the model included the exact supplied clause. `qwen-stream` lets Qwen write
-one connected annual response; Python preserves or shapes paragraph breaks,
-removes repeated connective/factual sentences, and repairs omitted anchors.
-`qwen-thread` adds a bounded prior passage to Memoire prompts and asks for a
-primary thread plus supporting moments. Both remain explicit profiles rather than
-changing the default.
+Legacy experimental profiles are removed from runtime registration.
+Only `qwen-thread` is active in this branch.
 
-Luna's preparation lives in `helper/luna_writing.py`: original full context and
-translation envelope, no personal-brief compiler or Python annual assembly.
-Luna cannot select either Qwen route. Its low reasoning setting stays independent
-of interactive Codex. `luna-fast` and `qwen-literary` are unsupported.
+## Worker and diagnostics
 
-Transport adapters accept prepared prompts and schemas. They share process/network
-handling, not writing policy. Knowledge filtering, factual coverage and persistence
-remain common safeguards. Canonical generation settings include model and strategy
-versions and tuning; completed prose records prompt/schema digests and available
-model timing metrics. Failed revisions preserve the prior story and its provenance.
-Completed annual chapters remain immutable. Dormant books are not bulk rewritten.
+Profile and tuning selection comes from `LOREKEEPER_WRITER_PROFILE` and
+`LOREKEEPER_MODEL_OPTIONS` (plus strategy options), with optional tuning via
+`helper/writer_profiles.example.json`. Invalid mixed-provider or cross-model
+settings fail before invocation.
 
-Select `LOREKEEPER_WRITER_PROFILE` before starting the worker. Clear conflicting
-legacy `LOREKEEPER_PROVIDER`, `LOREKEEPER_MODEL`, and strategy overrides when
-switching profiles; mismatches are errors. `LOREKEEPER_WRITER_CONFIG` accepts the
-JSON format in `helper/writer_profiles.example.json` for separately tuned profiles
-of registered models. Model options and strategy options are validated separately.
-
-Evaluate a captured item with `helper/evaluate_writing.py --profile PROFILE
---output .lorekeeper/NEW-REPORT.json INPUT`. Repeat `--profile` to compare each
-model using its own policy. Reports retain private evidence/prose; never commit
-them. This evaluator does not publish into game saves. Coverage success does not
-prove every narrative claim. Native Windows Luna execution requires an installed,
-authenticated Windows Codex CLI; this development machine currently has the CLI
-only in WSL. Windows and WSL Codex installations keep separate PATHs and login
-state.
-
-Both Linux and Windows suites: 211 tests, 204 passed, seven optional live tests
-skipped. Tests cover cross-model rejection, separate prompts/envelopes, tuning,
-fallback provenance, and preservation of an existing revision on failure.
-Python routing changes require a watcher restart, but no Dwarf Fortress restart.
-
-Bounded live checks using isolated captured items passed: Windows Ollama Qwen
-annual 3.30s with all seven required anchors; quiet monthly 2.98s. WSL Codex Luna
-full-context monthly 13.04s. The quiet monthly sample has no mandatory anchors;
-these are transport/routing checks and single warm timings, not literary acceptance
-or a model quality ranking. Diagnostic reports remain under `.lorekeeper/router-*-owned-*`.
+`helper/evaluate_writing.py` still supports explicit comparison runs, but only
+with the active `qwen-thread` route in this cleanup mode.

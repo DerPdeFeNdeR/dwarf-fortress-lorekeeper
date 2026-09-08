@@ -14,9 +14,9 @@ changes, task registration, game configuration edits or model regeneration.
   startup. Registration does not start a task; Ready does not mean Running.
 - Updated roadmap, schema map and handoff to the published checkpoint. Older
   notes/architecture sketches remain historical evidence, not current setup steps.
-- Codex installation/authentication instructions were checked with official
-  documentation using the OpenAI Docs skill. Current worker model/effort came
-  from local code; model access is not promised for every account.
+- Worker installation guidance was checked against current provider
+documentation and local code. Current model/effort comes from runtime code;
+account access is not guaranteed for every environment.
 
 ## Verification and limits
 
@@ -35,7 +35,6 @@ limits remain unverified. The audit did not run dependency installers, change
 credentials, restart the task, or interrupt the player's fortress. No DF restart
 is required for these documentation changes. Publication requires separate approval.
 
-References: [current setup](../../README.md), [Codex CLI](https://learn.chatgpt.com/docs/codex/cli),
-[Codex authentication](https://learn.chatgpt.com/docs/auth),
+[current setup](../../README.md),
 [Microsoft WSL installation](https://learn.microsoft.com/en-us/windows/wsl/install),
 [DFHack configuration](https://docs.dfhack.org/en/stable/docs/Core.html#configuration-files).

@@ -1,7 +1,8 @@
 # Dwarf narrators — 2026-09-06
 
-Implements [ADR 0007](../decisions/0007-dwarf-narrators.md). No model change:
-gpt-5.6-luna / low. Profile schema 9, history-view schema 23, monthly protocol/book
+Implements [ADR 0007](../decisions/0007-dwarf-narrators.md). Current routing uses
+the cleanup `qwen-thread` profile (`qwen3:8b`) and current profile schema 9, history-view
+schema 23, monthly protocol/book
 version 1, annual request schema 2 (legacy schema 1 accepted).
 
 ## Implementation

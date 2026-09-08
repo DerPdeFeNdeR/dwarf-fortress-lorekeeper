@@ -2,9 +2,7 @@
 
 For Windows installation, use the [root README](../README.md#windows-developer-installation).
 Commands below are labeled **PowerShell** or **WSL**. The active player setup uses
-the native Windows worker, Windows Python, and local Ollama by default. Windows
-Codex/Luna is also supported when the Windows CLI is installed; WSL remains an
-optional alternative. Native Windows uses byte-range file
+the native Windows worker, Windows Python, and local Ollama. Native Windows uses byte-range file
 locks; WSL uses POSIX locks. Do not run both workers on the same save root:
 cross-platform lock interoperability is not assumed.
 
@@ -59,12 +57,12 @@ start a Windows scheduled task itself. See the root README for installation,
 ## Configuration
 
 The Lorekeeper worker explicitly passes these settings instead of inheriting your
-interactive Codex model configuration:
+global model configuration:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `LOREKEEPER_PROVIDER` | `ollama` | `ollama` or `codex-cli` |
-| `LOREKEEPER_MODEL` | `qwen3:8b` | Local Ollama model, or model accessible to Codex |
+| `LOREKEEPER_PROVIDER` | `ollama` | `ollama` |
+| `LOREKEEPER_MODEL` | `qwen3:8b` | Local Ollama model |
 | `LOREKEEPER_REASONING_EFFORT` | `low` | Effort accepted by that model |
 | `LOREKEEPER_OLLAMA_URL` | `http://127.0.0.1:11434/api/generate` | Local Ollama endpoint |
 | `TMPDIR` | `/dev/shm` through wrapper | Temporary structured model output |
@@ -85,9 +83,7 @@ export LOREKEEPER_REASONING_EFFORT='low'
 Ollama must be running on Windows before the native watcher starts (or before the
 WSL watcher when using WSL). The worker
 uses JSON-schema output, disables Qwen thinking for latency, and keeps the model
-loaded for 30 minutes. To use the previous hosted path, set
-`LOREKEEPER_PROVIDER=codex-cli`, choose a Codex model, and verify `codex login
-status`.
+loaded for 30 minutes. For cleanup-mode playtest, keep the provider on Ollama.
 
 Ollama uses a 20,480-token context and a 2,048-token output cap. Oversized inputs
 and incomplete outputs fail rather than replace a story; prompt truncation and
@@ -97,7 +93,7 @@ this does not guarantee that every future request will fit.
 
 Qwen3 non-thinking sampling uses temperature 0.7, top-p 0.8, top-k 20 and min-p 0,
 following Qwen's recommendations. These model options and the strategy versions
-are included in the canonical generation identity for caching. The Codex effort
+are included in the canonical generation identity for caching. The effort
 setting does not enable thinking in Ollama; Ollama always receives `think: false`.
 
 Preset `qwen3-personal-v7` uses compiled personal facts, relevant chapter context,
@@ -127,10 +123,10 @@ To restore defaults, remove these two environment variables and restart Ollama.
 
 For scheduled startup, put non-secret exports in the WSL login-shell startup
 file your distribution reads (commonly `~/.profile` or `~/.bash_profile`). Verify
-with `wsl.exe -- bash -lc 'command -v codex; codex login status'` in PowerShell,
-then restart the task. A setting only in an interactive `.bashrc` section may not
-reach a noninteractive login shell. Do not change personal Codex config for this
-project, or copy credentials into the checkout/save files.
+with `wsl.exe -- bash -lc 'echo ok'` in PowerShell, then restart the task.
+A setting only in an interactive `.bashrc` section may not reach a noninteractive
+login shell. Do not change project secrets for this project, or copy credentials
+into the checkout/save files.
 
 Model calls have a 180-second timeout. Current monthly Memoire processing writes
 at most one chapter per pass; unchanged/insignificant evidence avoids generation.
@@ -162,7 +158,7 @@ Mock tests do not prove a new game's field layout, account access or visual beha
 ## Legacy developer tools—not the Memoire installation path
 
 - `python3 helper/codex_batch.py INPUT.json OUTPUT.json`: up to 50 deduplicated
-  items in one schema-constrained Codex invocation. Inputs contain `id`, `kind`,
+  items in one schema-constrained local invocation. Inputs contain `id`, `kind`,
   `raw` and optional context. Uses the same model/auth settings as the worker.
 - `python3 helper/process_queue.py /path/to/region/lorekeeper-translation-queue.jsonl`:
   process the old token/selected-unit explanation queue; cache defaults beside it.
@@ -178,8 +174,8 @@ history job for `process_queue.py`.
 
 `helper/server.py` is separate and **not connected to the current in-game readers**.
 It binds to `127.0.0.1:8765`, uses a separately provided `OPENAI_API_KEY`, defaults
-to `gpt-5-mini`, and exposes `/health` and `/translate`. It uses the Platform API
-rather than the Codex sign-in path. No API server/key is needed for the setup above.
+to `gpt-5-mini`, and exposes `/health` and `/translate`. It uses the Platform API.
+No API server/key is needed for the setup above.
 
 For deliberate prototype development only, provide the API key privately in the
 process environment and run `python3 helper/server.py`. Other settings are
@@ -189,10 +185,7 @@ Lua, save data or Git. Do not expose this prototype beyond localhost.
 
 ## Model-specific writer profiles
 
-The worker defaults to `qwen-fast`. Set `LOREKEEPER_WRITER_PROFILE=luna-literary`
-to select Luna's separate full-context writing policy, or `qwen-compact` to
-evaluate Qwen's compact annual alternative. Restart the worker after switching.
-Clear conflicting legacy provider/model/strategy environment overrides first.
-Luna cannot use Qwen's strategies. See [model-owned writers](../docs/notes/model-owned-writers.md)
-and [example tuning profiles](writer_profiles.example.json). Windows Luna needs
-an installed, authenticated Windows Codex CLI; the WSL installation is separate.
+The worker defaults to `qwen-thread` (`memoire: personal-thread`,
+`chronicle: anchored-stream`). Restart the worker after changing profile-related
+settings. See [model-owned writers](../docs/notes/model-owned-writers.md) and
+[example tuning profiles](writer_profiles.example.json).

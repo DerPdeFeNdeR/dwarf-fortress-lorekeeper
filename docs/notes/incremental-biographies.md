@@ -70,9 +70,8 @@ between writes produces a digest mismatch and conservative rebuild, not a duplic
 append. Records, game-time reversal, and latest-segment changes prevent cross-branch
 continuations. This is not a claim of perfect save-lineage identification.
 
-No remote conversation is resumed: the existing ephemeral Codex worker receives
-explicit context per call. This follows the general stateless/context distinction
-in [OpenAI's conversation-state guide](https://developers.openai.com/api/docs/guides/conversation-state).
+No remote conversation is resumed: the background watcher worker receives explicit
+context per call. This keeps generation bounded and stateless across requests.
 Prior narrative is never promoted into the verified fact collection. Model and
 reasoning settings are unchanged. Model prose still requires human review; factual
 anchor checks do not prove every narrative connection is correct.

@@ -4,33 +4,20 @@ import json
 import os
 from pathlib import Path
 
-STRATEGY_VERSIONS = {'luna-literary': '1', 'personal-brief': '1', 'personal-thread': '4', 'compact': '1',
-                     'anchored': '1', 'anchored-weave': '1', 'anchored-stream': '1', 'translation': '1'}
+STRATEGY_VERSIONS = {'personal-thread': '4', 'anchored-stream': '1', 'compact': '1',
+                     'translation': '1'}
 OLLAMA_OPTIONS = dict(temperature=0.7, top_p=0.8, top_k=20, min_p=0,
                       num_ctx=20480, num_predict=2048, think=False)
-FAST = {'memoire': 'personal-brief', 'chronicle': 'anchored'}
-LITERARY = {'memoire': 'luna-literary', 'chronicle': 'luna-literary'}
 PERSONAL_OPTIONS = {'quiet_words': [60, 100], 'busy_words': [100, 180], 'intro_words': [80, 140]}
 PROFILES = {
-    'qwen-fast': dict(provider='ollama', model='qwen3:8b', strategies=FAST),
-    'qwen-weave': dict(provider='ollama', model='qwen3:8b',
-                       strategies={'memoire': 'personal-brief', 'chronicle': 'anchored-weave'},
-                       model_options={'temperature': 0.5}),
-    'qwen-stream': dict(provider='ollama', model='qwen3:8b',
-                        strategies={'memoire': 'personal-brief', 'chronicle': 'anchored-stream'},
-                        model_options={'temperature': 0.6}),
     'qwen-thread': dict(provider='ollama', model='qwen3:8b',
                         strategies={'memoire': 'personal-thread', 'chronicle': 'anchored-stream'},
                         model_options={'temperature': 0.6}),
-    'qwen-compact': dict(provider='ollama', model='qwen3:8b',
-                         strategies={'memoire': 'personal-brief', 'chronicle': 'compact'}),
-    'luna-literary': dict(provider='codex-cli', model='gpt-5.6-luna', strategies=LITERARY),
 }
 MODEL_POLICIES = {
-    'qwen3:8b': dict(provider='ollama', profile='qwen-fast',
-                    allowed={'memoire': {'personal-brief', 'personal-thread'}, 'chronicle': {'anchored', 'anchored-weave', 'anchored-stream', 'compact'}}),
-    'gpt-5.6-luna': dict(provider='codex-cli', profile='luna-literary',
-                        allowed={'memoire': {'luna-literary'}, 'chronicle': {'luna-literary'}}),
+    'qwen3:8b': dict(provider='ollama', profile='qwen-thread',
+                     allowed={'memoire': {'personal-thread'},
+                              'chronicle': {'anchored-stream'}}),
 }
 
 
@@ -52,14 +39,14 @@ def validate_options(options):
 def resolve_settings(settings):
     """Canonical cache identity, including effective defaults and strategy versions.
 
-Partial older callers default to Codex, as before. Persisted requested settings
-are snapshots: this function never merges the current process environment.
-"""
+Persisted requested settings are snapshots: this function never merges the current
+process environment.
+    """
     settings = copy.deepcopy(settings)
-    provider = settings.get('provider', 'codex-cli')
-    if provider not in ('ollama', 'codex-cli'):
-        raise ValueError('LOREKEEPER_PROVIDER must be ollama or codex-cli')
-    defaults = PROFILES['qwen-fast' if provider == 'ollama' else 'luna-literary']
+    provider = settings.get('provider', 'ollama')
+    if provider != 'ollama':
+        raise ValueError('LOREKEEPER_PROVIDER must be ollama')
+    defaults = PROFILES['qwen-thread']
     model = settings.get('model', defaults['model'])
     effort = settings.get('reasoning_effort', 'low')
     if not isinstance(model, str) or not model.strip():
@@ -80,11 +67,9 @@ are snapshots: this function never merges the current process environment.
     allowed = policy['allowed']
     if set(strategies) != set(allowed) or any(value not in allowed[key] for key, value in strategies.items()):
         raise ValueError(f'Writing strategy is not registered for {model} and content type')
-    options = dict(OLLAMA_OPTIONS, **settings.get('model_options', {})) if provider == 'ollama' else settings.get('model_options', {})
-    if provider == 'codex-cli' and options:
-        raise ValueError('Codex CLI uses reasoning_effort; Ollama model_options are not supported')
+    options = dict(OLLAMA_OPTIONS, **settings.get('model_options', {}))
     validate_options(options)
-    strategy_options = {'memoire': dict(PERSONAL_OPTIONS) if strategies['memoire'] in ('personal-brief', 'personal-thread') else {}, 'chronicle': {}}
+    strategy_options = {'memoire': dict(PERSONAL_OPTIONS) if strategies['memoire'] == 'personal-thread' else {}, 'chronicle': {}}
     for kind, tuning in settings.get('strategy_options', {}).items():
         if kind not in strategy_options or not isinstance(tuning, dict) or set(tuning) - strategy_options[kind].keys():
             raise ValueError('Unsupported options for the selected writing strategy')
@@ -106,9 +91,12 @@ def generation_settings(*, profile=None, overrides=None):
         custom = json.loads(Path(config).read_text(encoding='utf-8'))
         if not isinstance(custom, dict) or not isinstance(custom.get('profiles'), dict):
             raise ValueError('Writer config must contain a profiles object')
-        profiles.update(custom['profiles'])
-    profile = profile or os.environ.get('LOREKEEPER_WRITER_PROFILE') or (
-        'luna-literary' if os.environ.get('LOREKEEPER_PROVIDER', '').strip().lower() == 'codex-cli' else 'qwen-fast')
+        if set(custom['profiles']) - {'qwen-thread'}:
+            raise ValueError('Cleanup mode supports only the qwen-thread writer profile')
+        profiles.update({key: value for key, value in custom['profiles'].items() if key == 'qwen-thread'})
+    profile = profile or os.environ.get('LOREKEEPER_WRITER_PROFILE') or 'qwen-thread'
+    if profile != 'qwen-thread':
+        raise ValueError('Cleanup mode supports only the qwen-thread writer profile')
     if profile not in profiles or not isinstance(profiles[profile], dict):
         raise ValueError(f'Unknown writer profile: {profile}')
     value = copy.deepcopy(profiles[profile])
